@@ -7,11 +7,15 @@ import LiveSession from './components/LiveSession';
 import CRMConnect from './components/CRMConnect';
 import DemoIntro from './components/DemoIntro';
 import UpgradePlan from './components/UpgradePlan';
+import PaymentPage from './components/PaymentPage';
 import { runAudit } from './services/auditService';
 import { RevenueLeak, AuditConfig, FORM_DEFAULTS } from './types';
 import { Loader2, Play, Mic, MessageSquare, CheckCircle } from 'lucide-react';
 
 const App: React.FC = () => {
+  // Check for payment success return
+  const isPaymentSuccess = new URLSearchParams(window.location.search).get('success') === 'true';
+
   // App States
   const [isCRMConnected, setIsCRMConnected] = useState(false);
   const [showDemoIntro, setShowDemoIntro] = useState(false);
@@ -27,7 +31,12 @@ const App: React.FC = () => {
   const [isManagerMode, setIsManagerMode] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
 
-  // Connection & Demo Logic
+  // 1. Payment Success View (Top Priority)
+  if (isPaymentSuccess) {
+    return <PaymentPage />;
+  }
+
+  // 2. Connection & Demo Logic
   if (!isCRMConnected) {
     if (showDemoIntro) {
       return <DemoIntro onStart={() => {
@@ -43,9 +52,15 @@ const App: React.FC = () => {
 
   const handleRunAudit = async () => {
     setAppState('SCANNING');
-    const results = await runAudit();
-    setLeaks(results);
-    setAppState('RESULTS');
+    try {
+      const results = await runAudit();
+      setLeaks(results);
+      setAppState('RESULTS');
+    } catch (e) {
+      console.error(e);
+      setAppState('IDLE');
+      // Could add error toast here
+    }
   };
 
   const handleManagerMode = () => {

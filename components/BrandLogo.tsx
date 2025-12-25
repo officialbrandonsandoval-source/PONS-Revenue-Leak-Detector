@@ -1,17 +1,23 @@
 import React from 'react';
 
 export const BrandLogo: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 220 65" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    {/* P Loop */}
-    <path d="M20 10 H 40 C 52 10 52 34 40 34 H 20" stroke="currentColor" strokeWidth="10" strokeLinecap="square" />
+  <svg viewBox="0 0 240 60" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    {/* P: Stem + Underline connecting to S */}
+    <path 
+      d="M20 10 V 52 H 180 C 200 52 205 45 195 38 C 185 31 180 34 180 22 C 180 10 200 10 210 12" 
+      stroke="currentColor" 
+      strokeWidth="8" 
+      strokeLinecap="square" 
+      strokeLinejoin="round"
+    />
     
-    {/* Connected Path: P Stem -> Underline -> S Shape */}
-    <path d="M20 10 V 55 H 180 C 200 55 200 40 185 40 H 175 C 160 40 160 25 175 25 H 195" stroke="currentColor" strokeWidth="10" strokeLinecap="square" />
+    {/* P: Loop */}
+    <path d="M20 10 H 50 C 65 10 65 32 50 32 H 20" stroke="currentColor" strokeWidth="8" strokeLinecap="square" />
 
     {/* O */}
-    <rect x="65" y="10" width="32" height="32" rx="16" stroke="currentColor" strokeWidth="10" />
+    <rect x="75" y="10" width="30" height="30" rx="15" stroke="currentColor" strokeWidth="8" />
 
     {/* N */}
-    <path d="M115 42 V 10 L 145 42 V 10" stroke="currentColor" strokeWidth="10" strokeLinejoin="round" strokeLinecap="square" />
+    <path d="M125 40 V 10 L 155 40 V 10" stroke="currentColor" strokeWidth="8" strokeLinecap="square" strokeLinejoin="round" />
   </svg>
 );
