@@ -1,0 +1,7 @@
+{
+  "name": "PONS - Revenue Leak Detector",
+  "description": "A revenue intelligence layer that detects revenue leaks, ranks priorities, and recommends high-ROI actions based on CRM data.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
