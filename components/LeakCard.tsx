@@ -26,10 +26,13 @@ const LeakCard: React.FC<LeakCardProps> = ({ leak, rank, isAggressive = false })
   const severityColor = {
     LOW: 'text-zinc-400 bg-zinc-400/10',
     MEDIUM: 'text-orange-400 bg-orange-400/10',
+    HIGH: 'text-red-400 bg-red-400/10',
     CRITICAL: 'text-red-500 bg-red-500/10',
   };
 
-  const borderClass = leak.severity === 'CRITICAL' ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-zinc-700';
+  const borderClass = ['CRITICAL', 'HIGH'].includes(leak.severity) 
+    ? 'border-l-4 border-l-red-500' 
+    : 'border-l-4 border-l-zinc-700';
   
   // Aggressive Mode Overrides
   const bgClass = isAggressive ? 'bg-zinc-900/80' : 'bg-zinc-900';

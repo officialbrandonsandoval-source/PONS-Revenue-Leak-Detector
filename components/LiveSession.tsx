@@ -28,9 +28,15 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
   // Audio Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const inputContextRef = useRef<AudioContext | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const sessionRef = useRef<any>(null);
+  const isMutedRef = useRef(false);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   useEffect(() => {
     let mounted = true;
@@ -47,6 +53,7 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
         outputNode.connect(outputAudioContext.destination);
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStreamRef.current = stream;
         
         // Configure System Instruction based on mode
         const systemInstruction = isManagerMode 
@@ -64,6 +71,9 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
               const scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
               
               scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+                if (isMutedRef.current) {
+                  return;
+                }
                 const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
                 const pcmBlob = createPcmBlob(inputData);
                 sessionPromise.then((session) => {
@@ -72,7 +82,10 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
               };
               
               source.connect(scriptProcessor);
-              scriptProcessor.connect(inputAudioContext.destination);
+              const inputGain = inputAudioContext.createGain();
+              inputGain.gain.value = 0;
+              scriptProcessor.connect(inputGain);
+              inputGain.connect(inputAudioContext.destination);
             },
             onmessage: async (message: LiveServerMessage) => {
               // 1. Handle Tool Calling (Manager Mode)
@@ -163,6 +176,9 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
       // Cleanup
       if (sessionRef.current) {
         sessionRef.current.then((s: any) => s.close());
+      }
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (inputContextRef.current) inputContextRef.current.close();
       if (audioContextRef.current) audioContextRef.current.close();

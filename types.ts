@@ -1,4 +1,4 @@
-export type Severity = 'LOW' | 'MEDIUM' | 'CRITICAL';
+export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export interface RevenueLeak {
   id: string;
