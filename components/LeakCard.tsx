@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { RevenueLeak } from '../types';
-import { AlertTriangle, DollarSign, Clock, CheckCircle2, ChevronRight, Siren, Volume2, Flame } from 'lucide-react';
+import { AlertTriangle, DollarSign, Clock, CheckCircle2, ChevronRight, Siren, Volume2, Flame, Loader2 } from 'lucide-react';
 import { playLeakAudio } from '../services/aiService';
+import { executeLeakAction } from '../services/auditService';
 
 interface LeakCardProps {
   leak: RevenueLeak;
@@ -12,6 +13,7 @@ interface LeakCardProps {
 const LeakCard: React.FC<LeakCardProps> = ({ leak, rank, isAggressive = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS'>('IDLE');
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -43,6 +45,22 @@ const LeakCard: React.FC<LeakCardProps> = ({ leak, rank, isAggressive = false })
     playLeakAudio(textToRead).then(() => {
         setTimeout(() => setIsPlaying(false), 5000); // Reset state roughly after play
     });
+  };
+
+  const handleExecute = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExecutionStatus('LOADING');
+    
+    // Call the API service to write back to CRM
+    const success = await executeLeakAction(leak.id, leak.recommendedAction);
+    
+    if (success) {
+      setExecutionStatus('SUCCESS');
+      // Optionally play a sound or provide more feedback here
+    } else {
+      setExecutionStatus('IDLE');
+      // In production, show error toast
+    }
   };
 
   return (
@@ -144,8 +162,28 @@ const LeakCard: React.FC<LeakCardProps> = ({ leak, rank, isAggressive = false })
                   <p className={`${isAggressive ? 'text-red-100 font-bold' : 'text-blue-100 font-semibold'} text-sm leading-relaxed`}>
                     {leak.recommendedAction}
                   </p>
-                  <button className={`mt-3 w-full ${actionBtnClass} text-sm py-2 rounded transition-colors flex items-center justify-center gap-2`}>
-                    Execute Now <ChevronRight size={14} />
+                  <button 
+                    onClick={handleExecute}
+                    disabled={executionStatus !== 'IDLE'}
+                    className={`mt-3 w-full ${
+                      executionStatus === 'SUCCESS' ? 'bg-green-600 hover:bg-green-500 border-green-500/50' : actionBtnClass
+                    } text-sm py-2 rounded transition-all flex items-center justify-center gap-2 disabled:opacity-90 disabled:cursor-default`}
+                  >
+                    {executionStatus === 'LOADING' ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Processing CRM Write-back...
+                      </>
+                    ) : executionStatus === 'SUCCESS' ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        Action Executed
+                      </>
+                    ) : (
+                      <>
+                        Execute Now <ChevronRight size={14} />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

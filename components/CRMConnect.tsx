@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Cloud, Hexagon, Kanban, Box, CheckCircle2, ArrowRight, Loader2, ShieldCheck, Zap } from 'lucide-react';
 import { CRMProvider, CRMCredentials } from '../types';
-import { CRM_PROVIDERS, authenticateCRM } from '../services/crmAdapter.ts';
+import { CRM_PROVIDERS, authenticateCRM } from '../services/crmAdapter';
 import { BrandLogo } from './BrandLogo';
 
 interface CRMConnectProps {
