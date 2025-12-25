@@ -4,17 +4,10 @@ import cors from "cors";
 const app = express();
 app.use(express.json());
 
-app.use(
-  cors({
-    origin: [
-      "https://pons.solutions",
-      "https://www.pons.solutions",
-      "https://pons-revenue-leak-detector-219733399964.us-west1.run.app"
-    ],
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
+// Allow all origins for demo flexibility
+app.use(cors({
+  origin: "*"
+}));
 
 app.options("*", cors());
 
@@ -25,20 +18,32 @@ app.get("/", (req, res) => {
 
 // AUDIT ENDPOINT
 app.post("/audit", (req, res) => {
-  res.json({
-    generated_at: new Date().toISOString(),
-    leaks: [
-      {
-        id: "unworked_high_intent_leads",
-        severity: "CRITICAL",
-        revenue_at_risk: 21500,
-        cause: "2 inbound leads untouched for over 36 hours",
-        recommended_action: "Call top 5 inbound leads immediately",
-        time_sensitivity: "Delay >48h reduces recovery odds by ~60%",
-        priority_score: 34400,
-      },
-    ],
-  });
+  // Simulating a slight delay for realism
+  setTimeout(() => {
+    res.json({
+      generated_at: new Date().toISOString(),
+      leaks: [
+        {
+          id: "unworked_high_intent_leads",
+          severity: "CRITICAL",
+          revenue_at_risk: 21500,
+          cause: "2 inbound leads untouched for over 36 hours",
+          recommended_action: "Call top 5 inbound leads immediately",
+          time_sensitivity: "Delay >48h reduces recovery odds by ~60%",
+          priority_score: 34400,
+        },
+        {
+          id: "contract_stalled_legal",
+          severity: "MEDIUM",
+          revenue_at_risk: 55000,
+          cause: "Contract in legal review > 7 days",
+          recommended_action: "Ping Legal Counsel for status update",
+          time_sensitivity: "End of quarter risk",
+          priority_score: 22000,
+        }
+      ],
+    });
+  }, 800);
 });
 
 const port = process.env.PORT || 8080;
