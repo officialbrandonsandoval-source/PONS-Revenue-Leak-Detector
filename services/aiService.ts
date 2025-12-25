@@ -1,12 +1,25 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { decode, decodeAudioData } from "./audioUtils";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getApiKey = () => process.env.API_KEY || process.env.GEMINI_API_KEY;
+
+const getAIClient = () => {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 // --- Text to Speech ---
 
 export const playLeakAudio = async (text: string) => {
   try {
+    const ai = getAIClient();
+    if (!ai) {
+      console.warn("GEMINI_API_KEY is missing. Skipping TTS.");
+      return;
+    }
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: text }] }],
@@ -55,6 +68,11 @@ export const generateChatResponse = async (
   mode: 'fast' | 'thinking'
 ): Promise<string> => {
   
+  const ai = getAIClient();
+  if (!ai) {
+    return "GEMINI_API_KEY is missing. Add it to .env.local to enable chat.";
+  }
+
   const modelName = mode === 'thinking' ? 'gemini-3-pro-preview' : 'gemini-2.5-flash-lite';
   
   const config: any = {

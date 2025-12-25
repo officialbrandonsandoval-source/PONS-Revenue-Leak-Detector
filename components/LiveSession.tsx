@@ -4,7 +4,7 @@ import { createPcmBlob, decode, decodeAudioData } from '../services/audioUtils';
 import { getPipelineAnalytics } from '../services/auditService';
 import { X, Mic, MicOff, Zap, Crown } from 'lucide-react';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getApiKey = () => process.env.API_KEY || process.env.GEMINI_API_KEY;
 
 interface LiveSessionProps {
   onClose: () => void;
@@ -24,6 +24,7 @@ const pipelineTool: FunctionDeclaration = {
 const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = false }) => {
   const [status, setStatus] = useState<'CONNECTING' | 'ACTIVE' | 'ERROR'>('CONNECTING');
   const [isMuted, setIsMuted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Audio Refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -43,6 +44,15 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
 
     const startSession = async () => {
       try {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+          if (mounted) {
+            setErrorMessage('Missing GEMINI_API_KEY');
+            setStatus('ERROR');
+          }
+          return;
+        }
+        const ai = new GoogleGenAI({ apiKey });
         const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
         const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
         
@@ -218,7 +228,9 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose, isManagerMode = fals
             {status === 'ERROR' && "Connection Failed"}
         </h3>
         <p className="text-zinc-500 text-sm">
-            {status === 'ACTIVE' ? "Listening... Speak naturally." : "Please wait."}
+            {status === 'ACTIVE' && "Listening... Speak naturally."}
+            {status === 'CONNECTING' && "Please wait."}
+            {status === 'ERROR' && (errorMessage || "Please check your API key and try again.")}
         </p>
       </div>
 
