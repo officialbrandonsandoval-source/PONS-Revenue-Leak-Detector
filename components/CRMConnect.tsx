@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Cloud, Hexagon, Kanban, Box, Lock, CheckCircle2, ArrowRight, Loader2, ShieldCheck, Zap } from 'lucide-react';
+import { Cloud, Hexagon, Kanban, Box, CheckCircle2, ArrowRight, Loader2, ShieldCheck, Zap } from 'lucide-react';
 import { CRMProvider, CRMCredentials } from '../types';
 import { CRM_PROVIDERS, authenticateCRM } from '../services/crmAdapter.ts';
+import { BrandLogo } from './BrandLogo';
 
 interface CRMConnectProps {
   onConnected: () => void;
@@ -47,10 +48,8 @@ const CRMConnect: React.FC<CRMConnectProps> = ({ onConnected, onDemoMode }) => {
       
       <div className="w-full max-w-md">
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-zinc-900 rounded-xl border border-zinc-800 mx-auto flex items-center justify-center mb-4 shadow-2xl">
-            <Lock size={20} className="text-zinc-400" />
-          </div>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <BrandLogo className="h-12 w-auto mb-6 text-blue-600" />
           <h1 className="text-2xl font-bold text-white tracking-tight mb-2">Connect Data Source</h1>
           <p className="text-zinc-500 text-sm">PONS requires read-only access to your CRM to detect revenue leaks.</p>
         </div>

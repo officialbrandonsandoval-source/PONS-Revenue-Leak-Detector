@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, ShieldAlert, TrendingUp } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 interface DemoIntroProps {
   onStart: () => void;
@@ -14,7 +15,9 @@ const DemoIntro: React.FC<DemoIntroProps> = ({ onStart }) => {
         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full"></div>
 
-        <div className="relative z-10">
+        <div className="relative z-10 flex flex-col items-start">
+          <BrandLogo className="h-10 w-auto mb-8 text-blue-600" />
+
           <div className="flex items-center gap-2 mb-6">
              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
                 <Play size={16} fill="white" className="text-white" />
@@ -27,7 +30,7 @@ const DemoIntro: React.FC<DemoIntroProps> = ({ onStart }) => {
             We have connected PONS to a <span className="text-zinc-200 font-semibold">sandbox CRM</span> containing typical revenue leakage patterns.
           </p>
 
-          <div className="space-y-4 mb-8">
+          <div className="space-y-4 mb-8 w-full">
             <div className="flex items-start gap-3">
                <ShieldAlert className="text-red-500 shrink-0 mt-0.5" size={20} />
                <div>

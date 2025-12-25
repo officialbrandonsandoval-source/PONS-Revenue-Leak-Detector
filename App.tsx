@@ -6,6 +6,7 @@ import ChatOverlay from './components/ChatOverlay';
 import LiveSession from './components/LiveSession';
 import CRMConnect from './components/CRMConnect';
 import DemoIntro from './components/DemoIntro';
+import UpgradePlan from './components/UpgradePlan';
 import { runAudit } from './services/auditService';
 import { RevenueLeak, AuditConfig, FORM_DEFAULTS } from './types';
 import { Loader2, Play, Mic, MessageSquare, CheckCircle } from 'lucide-react';
@@ -20,10 +21,11 @@ const App: React.FC = () => {
   const [leaks, setLeaks] = useState<RevenueLeak[]>([]);
   const [config, setConfig] = useState<AuditConfig>(FORM_DEFAULTS);
   
-  // AI Feature States
+  // Feature States
   const [showChat, setShowChat] = useState(false);
   const [showLive, setShowLive] = useState(false);
   const [isManagerMode, setIsManagerMode] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
 
   // Connection & Demo Logic
   if (!isCRMConnected) {
@@ -61,7 +63,10 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen pb-20 relative overflow-hidden transition-colors duration-500 ${config.isAggressive ? 'bg-black' : 'bg-zinc-950'}`}>
-      <Header onManagerMode={handleManagerMode} />
+      <Header 
+        onManagerMode={handleManagerMode} 
+        onOpenProfile={() => setShowPayment(true)}
+      />
       
       <main className="max-w-md mx-auto w-full">
         
@@ -209,9 +214,10 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* AI Overlays */}
+      {/* Overlays */}
       {showChat && <ChatOverlay onClose={() => setShowChat(false)} />}
       {showLive && <LiveSession onClose={handleCloseLive} isManagerMode={isManagerMode} />}
+      {showPayment && <UpgradePlan onClose={() => setShowPayment(false)} />}
 
       <style>{`
         @keyframes progress {
