@@ -120,10 +120,6 @@ const App: React.FC = () => {
   };
 
   const handleManagerMode = () => {
-    if (!isEntitled) {
-      setShowPayment(true);
-      return;
-    }
     setIsManagerMode(true);
     setShowLive(true);
   };
@@ -295,16 +291,10 @@ const App: React.FC = () => {
           {isEntitled ? <MessageSquare size={24} /> : <Lock size={20} />}
         </button>
         <button 
-          onClick={() => {
-            if (!isEntitled) {
-              setShowPayment(true);
-              return;
-            }
-            setShowLive(true);
-          }}
-          className={`w-14 h-14 rounded-full text-white shadow-xl transition-all flex items-center justify-center ${config.isAggressive ? 'bg-gradient-to-br from-red-600 to-orange-600 shadow-red-600/30' : 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-600/30'} ${isEntitled ? 'hover:scale-105 active:scale-95' : 'opacity-70 hover:opacity-90'}`}
+          onClick={() => setShowLive(true)}
+          className={`w-14 h-14 rounded-full text-white shadow-xl transition-all flex items-center justify-center ${config.isAggressive ? 'bg-gradient-to-br from-red-600 to-orange-600 shadow-red-600/30' : 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-600/30'} hover:scale-105 active:scale-95`}
         >
-           {isEntitled ? <Mic size={24} /> : <Lock size={20} />}
+           <Mic size={24} />
         </button>
       </div>
 
