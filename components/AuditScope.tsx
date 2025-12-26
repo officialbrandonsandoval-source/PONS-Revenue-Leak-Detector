@@ -5,12 +5,18 @@ import { AuditConfig } from '../types';
 interface AuditScopeProps {
   config: AuditConfig;
   setConfig: React.Dispatch<React.SetStateAction<AuditConfig>>;
+  isEntitled?: boolean;
+  onRequireUpgrade?: () => void;
 }
 
-const AuditScope: React.FC<AuditScopeProps> = ({ config, setConfig }) => {
+const AuditScope: React.FC<AuditScopeProps> = ({ config, setConfig, isEntitled = false, onRequireUpgrade }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleAggressive = () => {
+    if (!isEntitled) {
+      onRequireUpgrade?.();
+      return;
+    }
     setConfig(prev => ({ ...prev, isAggressive: !prev.isAggressive }));
   };
 

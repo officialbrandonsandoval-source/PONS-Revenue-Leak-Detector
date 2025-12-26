@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
-import { X, Check, Shield, Zap, Lock, CreditCard, Loader2, ArrowRight } from 'lucide-react';
+import { X, Check, Shield, Zap, Lock, Loader2, ArrowRight, AlertTriangle } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
+import { createCheckoutSession } from '../services/billingService';
 
 // --- STRIPE CONFIGURATION ---
-const STRIPE_MONTHLY = "https://buy.stripe.com/fZufZifiQ8kL8OP3Z2fAc00";
-const STRIPE_ANNUAL = "https://buy.stripe.com/eVq6oIgmUasTfdd536fAc01";
-
-export function goMonthly() {
-  window.location.href = STRIPE_MONTHLY;
-}
-
-export function goAnnual() {
-  window.location.href = STRIPE_ANNUAL;
-}
 // ----------------------------
 
 interface UpgradePlanProps {
@@ -22,18 +13,20 @@ interface UpgradePlanProps {
 const UpgradePlan: React.FC<UpgradePlanProps> = ({ onClose }) => {
   const [processingState, setProcessingState] = useState<'IDLE' | 'REDIRECTING' | 'SUCCESS'>('IDLE');
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     setProcessingState('REDIRECTING');
+    setError(null);
     
-    // Short delay to show the spinner/feedback, then redirect
-    setTimeout(() => {
-        if (billingCycle === 'MONTHLY') {
-            goMonthly();
-        } else {
-            goAnnual();
-        }
-    }, 1000);
+    try {
+      const url = await createCheckoutSession(billingCycle);
+      window.location.href = url;
+    } catch (err) {
+      console.error('Checkout error', err);
+      setError('Stripe checkout failed. Please try again.');
+      setProcessingState('IDLE');
+    }
   };
 
   if (processingState === 'SUCCESS') {
@@ -136,6 +129,13 @@ const UpgradePlan: React.FC<UpgradePlanProps> = ({ onClose }) => {
                         </>
                     )}
                 </button>
+
+                {error && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+                    <AlertTriangle size={12} />
+                    <span>{error}</span>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-center gap-2 opacity-60 grayscale hover:grayscale-0 transition-all duration-300">
                     <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider flex items-center gap-1">

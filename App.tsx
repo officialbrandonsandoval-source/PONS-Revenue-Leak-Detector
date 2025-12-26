@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from './components/Header';
 import AuditScope from './components/AuditScope';
 import LeakCard from './components/LeakCard';
@@ -9,13 +9,11 @@ import DemoIntro from './components/DemoIntro';
 import UpgradePlan from './components/UpgradePlan';
 import PaymentPage from './components/PaymentPage';
 import { runAudit } from './services/auditService';
+import { fetchEntitlementStatus, verifyCheckoutSession } from './services/billingService';
 import { RevenueLeak, AuditConfig, FORM_DEFAULTS } from './types';
-import { Loader2, Play, Mic, MessageSquare, CheckCircle } from 'lucide-react';
+import { Loader2, Play, Mic, MessageSquare, CheckCircle, Lock } from 'lucide-react';
 
 const App: React.FC = () => {
-  // Check for payment success return
-  const isPaymentSuccess = new URLSearchParams(window.location.search).get('success') === 'true';
-
   // App States
   const [isCRMConnected, setIsCRMConnected] = useState(false);
   const [showDemoIntro, setShowDemoIntro] = useState(false);
@@ -30,10 +28,68 @@ const App: React.FC = () => {
   const [showLive, setShowLive] = useState(false);
   const [isManagerMode, setIsManagerMode] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [isEntitled, setIsEntitled] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [paymentFailed, setPaymentFailed] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchEntitlementStatus()
+      .then((entitled) => {
+        if (mounted) setIsEntitled(entitled);
+      })
+      .finally(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isSuccess = params.get('success') === 'true';
+    const sessionId = params.get('session_id');
+
+    if (!isSuccess) return;
+    setShowPaymentSuccess(true);
+
+    if (!sessionId) {
+      setPaymentFailed(true);
+      setShowPaymentSuccess(false);
+      return;
+    }
+
+    setIsVerifyingPayment(true);
+    verifyCheckoutSession(sessionId)
+      .then((entitled) => {
+        setIsVerifyingPayment(false);
+        if (entitled) {
+          setIsEntitled(true);
+          setShowPaymentSuccess(true);
+        } else {
+          setPaymentFailed(true);
+          setShowPaymentSuccess(false);
+        }
+      })
+      .catch(() => {
+        setIsVerifyingPayment(false);
+        setPaymentFailed(true);
+        setShowPaymentSuccess(false);
+      })
+      .finally(() => {
+        window.history.replaceState({}, '', window.location.pathname);
+      });
+  }, []);
 
   // 1. Payment Success View (Top Priority)
-  if (isPaymentSuccess) {
-    return <PaymentPage />;
+  if (isVerifyingPayment) {
+    return <PaymentPage status="verifying" />;
+  }
+  if (paymentFailed) {
+    return <PaymentPage status="failed" />;
+  }
+  if (showPaymentSuccess) {
+    return <PaymentPage status="success" />;
   }
 
   // 2. Connection & Demo Logic
@@ -64,6 +120,10 @@ const App: React.FC = () => {
   };
 
   const handleManagerMode = () => {
+    if (!isEntitled) {
+      setShowPayment(true);
+      return;
+    }
     setIsManagerMode(true);
     setShowLive(true);
   };
@@ -75,6 +135,8 @@ const App: React.FC = () => {
 
   // Filter leaks based on Aggressive Mode
   const displayedLeaks = config.isAggressive ? leaks.slice(0, 3) : leaks;
+
+  const requireUpgrade = () => setShowPayment(true);
 
   return (
     <div className={`min-h-screen pb-20 relative overflow-hidden transition-colors duration-500 ${config.isAggressive ? 'bg-black' : 'bg-zinc-950'}`}>
@@ -88,7 +150,12 @@ const App: React.FC = () => {
         {/* IDLE STATE */}
         {appState === 'IDLE' && (
           <div className="animate-in fade-in duration-500">
-            <AuditScope config={config} setConfig={setConfig} />
+            <AuditScope 
+              config={config} 
+              setConfig={setConfig}
+              isEntitled={isEntitled}
+              onRequireUpgrade={requireUpgrade}
+            />
             
             <div className="px-4 mt-12 flex flex-col items-center">
               <div className="w-full max-w-xs relative group">
@@ -216,16 +283,28 @@ const App: React.FC = () => {
       {/* Floating Action Buttons for AI - Only show when connected */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-4 z-40">
         <button 
-          onClick={() => setShowChat(true)}
-          className="w-14 h-14 rounded-full bg-zinc-800 border border-zinc-700 text-white shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+          onClick={() => {
+            if (!isEntitled) {
+              setShowPayment(true);
+              return;
+            }
+            setShowChat(true);
+          }}
+          className={`w-14 h-14 rounded-full bg-zinc-800 border border-zinc-700 text-white shadow-xl transition-all flex items-center justify-center ${isEntitled ? 'hover:scale-105 active:scale-95' : 'opacity-70 hover:opacity-90'}`}
         >
-          <MessageSquare size={24} />
+          {isEntitled ? <MessageSquare size={24} /> : <Lock size={20} />}
         </button>
         <button 
-          onClick={() => setShowLive(true)}
-          className={`w-14 h-14 rounded-full text-white shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center ${config.isAggressive ? 'bg-gradient-to-br from-red-600 to-orange-600 shadow-red-600/30' : 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-600/30'}`}
+          onClick={() => {
+            if (!isEntitled) {
+              setShowPayment(true);
+              return;
+            }
+            setShowLive(true);
+          }}
+          className={`w-14 h-14 rounded-full text-white shadow-xl transition-all flex items-center justify-center ${config.isAggressive ? 'bg-gradient-to-br from-red-600 to-orange-600 shadow-red-600/30' : 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-600/30'} ${isEntitled ? 'hover:scale-105 active:scale-95' : 'opacity-70 hover:opacity-90'}`}
         >
-           <Mic size={24} />
+           {isEntitled ? <Mic size={24} /> : <Lock size={20} />}
         </button>
       </div>
 

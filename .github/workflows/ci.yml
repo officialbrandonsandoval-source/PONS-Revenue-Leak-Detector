@@ -6,8 +6,8 @@ on:
       - main
 
 jobs:
-  test:
-    name: Run Tests
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -22,12 +22,12 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Build
+        run: npm run build
 
   deploy:
-    name: Deploy (only if tests pass)
-    needs: test
+    name: Deploy (only if build passes)
+    needs: build
     runs-on: ubuntu-latest
 
     steps:

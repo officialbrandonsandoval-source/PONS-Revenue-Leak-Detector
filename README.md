@@ -15,6 +15,12 @@ View your app in AI Studio: https://ai.studio/apps/drive/1JA4xljoFq7iQo5YCf4HWos
 
 1. Install dependencies:
    `npm install`
-2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY`
+2. Copy `.env.example` to `.env.local` and set required keys:
+   - `GEMINI_API_KEY`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_PRICE_MONTHLY`
+   - `STRIPE_PRICE_ANNUAL`
+   - `ENTITLEMENT_SECRET`
+   - `APP_URL` (optional, fallback to request host)
 3. Run the app:
    `npm run dev`
