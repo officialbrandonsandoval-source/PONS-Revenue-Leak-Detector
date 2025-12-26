@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getStripeClient, getAppUrl } from './stripe';
+import { getStripeClient, getAppUrl } from './stripe.js';
 
 const getRequestOrigin = (req: VercelRequest) => {
   const proto = (req.headers['x-forwarded-proto'] as string) || 'https';
