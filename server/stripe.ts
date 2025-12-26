@@ -5,7 +5,7 @@ export const getStripeClient = () => {
   if (!apiKey) {
     return null;
   }
-  return new Stripe(apiKey, { apiVersion: '2024-06-20' });
+  return new Stripe(apiKey);
 };
 
 export const getAppUrl = () => {
