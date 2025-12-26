@@ -280,15 +280,11 @@ const App: React.FC = () => {
       <div className="fixed bottom-6 right-6 flex flex-col gap-4 z-40">
         <button 
           onClick={() => {
-            if (!isEntitled) {
-              setShowPayment(true);
-              return;
-            }
             setShowChat(true);
           }}
-          className={`w-14 h-14 rounded-full bg-zinc-800 border border-zinc-700 text-white shadow-xl transition-all flex items-center justify-center ${isEntitled ? 'hover:scale-105 active:scale-95' : 'opacity-70 hover:opacity-90'}`}
+          className="w-14 h-14 rounded-full bg-zinc-800 border border-zinc-700 text-white shadow-xl transition-all flex items-center justify-center hover:scale-105 active:scale-95"
         >
-          {isEntitled ? <MessageSquare size={24} /> : <Lock size={20} />}
+          <MessageSquare size={24} />
         </button>
         <button 
           onClick={() => setShowLive(true)}
