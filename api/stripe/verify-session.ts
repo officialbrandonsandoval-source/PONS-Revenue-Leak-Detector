@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getStripeClient } from '../../server/stripe';
-import { issueEntitlement } from '../../server/entitlement';
+import { getStripeClient } from './stripe';
+import { issueEntitlement } from './entitlement';
 
 const parseCookies = (cookieHeader?: string) => {
   if (!cookieHeader) return {};

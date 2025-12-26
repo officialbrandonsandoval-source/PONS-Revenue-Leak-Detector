@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyEntitlement } from '../../server/entitlement';
+import { verifyEntitlement } from './entitlement';
 
 const parseCookies = (cookieHeader?: string) => {
   if (!cookieHeader) return {};
