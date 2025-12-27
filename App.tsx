@@ -12,7 +12,7 @@ import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import { runAudit } from './services/auditService';
 import { fetchEntitlementStatus, verifyCheckoutSession } from './services/billingService';
-import { getStoredAuthToken } from './services/apiClient';
+import { clearAuthToken, getStoredAuthToken } from './services/apiClient';
 import { RevenueLeak, AuditConfig, FORM_DEFAULTS } from './types';
 import { Loader2, Play, Mic, MessageSquare, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -137,6 +137,15 @@ const App: React.FC = () => {
     setShowLive(true);
   };
 
+  const handleLogout = () => {
+    clearAuthToken();
+    setIsAuthenticated(false);
+    setShowChat(false);
+    setShowLive(false);
+    setShowDashboard(false);
+    toast.success('Logged out');
+  };
+
   const handleCloseLive = () => {
     setShowLive(false);
     setIsManagerMode(false); // Reset mode when closed
@@ -153,6 +162,7 @@ const App: React.FC = () => {
         onManagerMode={handleManagerMode} 
         onOpenProfile={() => setShowPayment(true)}
         onOpenDashboard={() => setShowDashboard(true)}
+        onLogout={handleLogout}
       />
       
       <main className="max-w-md mx-auto w-full">
