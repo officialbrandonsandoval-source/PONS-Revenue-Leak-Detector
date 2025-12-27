@@ -23,5 +23,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1JA4xljoFq7iQo5YCf4HWos
    - `ENTITLEMENT_SECRET`
    - `APP_URL` (optional, fallback to request host)
    - `VITE_PONS_API_URL` (optional, defaults to `http://localhost:8080`)
+   - `AUTH_JWT_SECRET`
+   - `AUTH_EMAIL` / `AUTH_PASSWORD` (optional, if set login requires these)
 3. Run the app:
    `npm run dev`
