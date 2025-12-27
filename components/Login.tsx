@@ -13,6 +13,7 @@ const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password || isLoading) return;
@@ -84,12 +85,30 @@ const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
 
         <button
           type="button"
-          onClick={() => toast('Password reset coming soon.', { icon: '🔒' })}
+          onClick={() => setShowResetModal(true)}
           className="mt-4 w-full text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           Forgot password?
         </button>
       </div>
+
+      {showResetModal && (
+        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-zinc-950 border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-2">Password reset</h2>
+            <p className="text-sm text-zinc-500 mb-6">
+              Password reset is not available yet. Contact your PONS admin for access.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowResetModal(false)}
+              className="w-full bg-white hover:bg-zinc-200 text-zinc-950 font-bold py-3 rounded-lg transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
