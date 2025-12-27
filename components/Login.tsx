@@ -81,6 +81,14 @@ const Login: React.FC<LoginProps> = ({ onAuthenticated }) => {
             </>
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={() => toast('Password reset coming soon.', { icon: '🔒' })}
+          className="mt-4 w-full text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          Forgot password?
+        </button>
       </div>
     </div>
   );
