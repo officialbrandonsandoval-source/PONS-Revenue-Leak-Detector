@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { RevenueLeak } from '../types';
 import { AlertTriangle, DollarSign, Clock, CheckCircle2, ChevronRight, Siren, Volume2, Flame, Loader2 } from 'lucide-react';
 import { playLeakAudio } from '../services/aiService';
-import { executeLeakAction } from '../services/auditService';
+import { createLeakAction } from '../services/actionsService';
+import toast from 'react-hot-toast';
 
 interface LeakCardProps {
   leak: RevenueLeak;
@@ -55,14 +56,14 @@ const LeakCard: React.FC<LeakCardProps> = ({ leak, rank, isAggressive = false })
     setExecutionStatus('LOADING');
     
     // Call the API service to write back to CRM
-    const success = await executeLeakAction(leak.id, leak.recommendedAction);
-    
-    if (success) {
+    try {
+      await createLeakAction(leak);
       setExecutionStatus('SUCCESS');
-      // Optionally play a sound or provide more feedback here
-    } else {
+      toast.success('Action sent to CRM');
+    } catch (error) {
+      console.error('Action error', error);
       setExecutionStatus('IDLE');
-      // In production, show error toast
+      toast.error('Failed to execute action');
     }
   };
 

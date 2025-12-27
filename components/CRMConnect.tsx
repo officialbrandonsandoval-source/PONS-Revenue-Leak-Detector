@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Cloud, Hexagon, Kanban, Box, CheckCircle2, ArrowRight, Loader2, ShieldCheck, Zap } from 'lucide-react';
-import { CRMProvider, CRMCredentials } from '../types';
+import { CRMProvider } from '../types';
 import { CRM_PROVIDERS, authenticateCRM } from '../services/crmAdapter';
 import { BrandLogo } from './BrandLogo';
+import toast from 'react-hot-toast';
 
 interface CRMConnectProps {
   onConnected: () => void;
@@ -12,6 +13,7 @@ interface CRMConnectProps {
 const CRMConnect: React.FC<CRMConnectProps> = ({ onConnected, onDemoMode }) => {
   const [selectedProvider, setSelectedProvider] = useState<CRMProvider>('salesforce');
   const [apiKey, setApiKey] = useState('');
+  const [oauthToken, setOauthToken] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,14 +23,17 @@ const CRMConnect: React.FC<CRMConnectProps> = ({ onConnected, onDemoMode }) => {
     
     const result = await authenticateCRM({
       provider: selectedProvider,
-      apiKey: apiKey
+      apiKey: apiKey,
+      oauthToken: oauthToken || undefined,
     });
 
     if (result.success) {
+      toast.success('CRM connected');
       onConnected();
     } else {
       setError(result.error || 'Connection Failed');
       setIsConnecting(false);
+      toast.error(result.error || 'Connection Failed');
     }
   };
 
@@ -42,6 +47,8 @@ const CRMConnect: React.FC<CRMConnectProps> = ({ onConnected, onDemoMode }) => {
       default: return <Cloud size={24} />;
     }
   };
+
+  const supportsOAuth = ['salesforce', 'hubspot', 'pipedrive'].includes(selectedProvider);
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
@@ -99,6 +106,22 @@ const CRMConnect: React.FC<CRMConnectProps> = ({ onConnected, onDemoMode }) => {
              />
            </div>
 
+           {supportsOAuth && (
+             <div className="space-y-2">
+               <label className="text-xs font-medium text-zinc-300 block">
+                 OAuth Token
+               </label>
+               <input 
+                 type="password" 
+                 value={oauthToken}
+                 onChange={(e) => setOauthToken(e.target.value)}
+                 placeholder="oauth_access_token"
+                 className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-3 text-sm text-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all placeholder:text-zinc-700 font-mono"
+               />
+               <p className="text-[10px] text-zinc-600">Provide API key or OAuth token.</p>
+             </div>
+           )}
+
            {error && (
              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-xs flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
@@ -108,7 +131,7 @@ const CRMConnect: React.FC<CRMConnectProps> = ({ onConnected, onDemoMode }) => {
 
            <button 
              onClick={handleConnect}
-             disabled={isConnecting || !apiKey}
+             disabled={isConnecting || (!apiKey && !oauthToken)}
              className="w-full bg-white hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 mt-4"
            >
              {isConnecting ? (

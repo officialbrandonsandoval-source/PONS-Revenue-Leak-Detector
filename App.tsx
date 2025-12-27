@@ -8,16 +8,21 @@ import CRMConnect from './components/CRMConnect';
 import DemoIntro from './components/DemoIntro';
 import UpgradePlan from './components/UpgradePlan';
 import PaymentPage from './components/PaymentPage';
+import Dashboard from './components/Dashboard';
+import Login from './components/Login';
 import { runAudit } from './services/auditService';
 import { fetchEntitlementStatus, verifyCheckoutSession } from './services/billingService';
+import { getStoredAuthToken } from './services/apiClient';
 import { RevenueLeak, AuditConfig, FORM_DEFAULTS } from './types';
-import { Loader2, Play, Mic, MessageSquare, CheckCircle, Lock } from 'lucide-react';
+import { Loader2, Play, Mic, MessageSquare, CheckCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const App: React.FC = () => {
   // App States
   const [isCRMConnected, setIsCRMConnected] = useState(false);
   const [showDemoIntro, setShowDemoIntro] = useState(false);
   const [appState, setAppState] = useState<'IDLE' | 'SCANNING' | 'RESULTS'>('IDLE');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getStoredAuthToken()));
   
   // Data States
   const [leaks, setLeaks] = useState<RevenueLeak[]>([]);
@@ -28,6 +33,7 @@ const App: React.FC = () => {
   const [showLive, setShowLive] = useState(false);
   const [isManagerMode, setIsManagerMode] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [isEntitled, setIsEntitled] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
@@ -66,15 +72,18 @@ const App: React.FC = () => {
         if (entitled) {
           setIsEntitled(true);
           setShowPaymentSuccess(true);
+          toast.success('Payment verified');
         } else {
           setPaymentFailed(true);
           setShowPaymentSuccess(false);
+          toast.error('Payment verification failed');
         }
       })
       .catch(() => {
         setIsVerifyingPayment(false);
         setPaymentFailed(true);
         setShowPaymentSuccess(false);
+        toast.error('Payment verification failed');
       })
       .finally(() => {
         window.history.replaceState({}, '', window.location.pathname);
@@ -90,6 +99,9 @@ const App: React.FC = () => {
   }
   if (showPaymentSuccess) {
     return <PaymentPage status="success" />;
+  }
+  if (!isAuthenticated) {
+    return <Login onAuthenticated={() => setIsAuthenticated(true)} />;
   }
 
   // 2. Connection & Demo Logic
@@ -112,10 +124,11 @@ const App: React.FC = () => {
       const results = await runAudit();
       setLeaks(results);
       setAppState('RESULTS');
+      toast.success('Audit complete');
     } catch (e) {
       console.error(e);
       setAppState('IDLE');
-      // Could add error toast here
+      toast.error('Audit failed');
     }
   };
 
@@ -139,6 +152,7 @@ const App: React.FC = () => {
       <Header 
         onManagerMode={handleManagerMode} 
         onOpenProfile={() => setShowPayment(true)}
+        onOpenDashboard={() => setShowDashboard(true)}
       />
       
       <main className="max-w-md mx-auto w-full">
@@ -298,6 +312,7 @@ const App: React.FC = () => {
       {showChat && <ChatOverlay onClose={() => setShowChat(false)} />}
       {showLive && <LiveSession onClose={handleCloseLive} isManagerMode={isManagerMode} />}
       {showPayment && <UpgradePlan onClose={() => setShowPayment(false)} />}
+      {showDashboard && <Dashboard onClose={() => setShowDashboard(false)} />}
 
       <style>{`
         @keyframes progress {

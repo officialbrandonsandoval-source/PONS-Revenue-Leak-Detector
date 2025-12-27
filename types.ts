@@ -38,6 +38,7 @@ export interface CRMCredentials {
   provider: CRMProvider;
   apiKey: string;
   domain?: string;
+  oauthToken?: string;
 }
 
 export interface CRMAdapter {

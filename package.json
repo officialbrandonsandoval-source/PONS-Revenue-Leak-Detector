@@ -15,7 +15,9 @@
     "@google/genai": "^0.2.0",
     "express": "^5.2.1",
     "cors": "^2.8.5",
-    "stripe": "^17.1.0"
+    "stripe": "^17.1.0",
+    "recharts": "^2.12.7",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

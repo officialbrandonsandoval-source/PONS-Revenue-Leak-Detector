@@ -1,13 +1,14 @@
 import React from 'react';
-import { User, Crown } from 'lucide-react';
+import { User, Crown, BarChart3 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 
 interface HeaderProps {
   onManagerMode?: () => void;
   onOpenProfile?: () => void;
+  onOpenDashboard?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onManagerMode, onOpenProfile }) => {
+const Header: React.FC<HeaderProps> = ({ onManagerMode, onOpenProfile, onOpenDashboard }) => {
   return (
     <header className="sticky top-0 z-50 w-full bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800">
       <div className="max-w-md mx-auto px-4 h-16 flex items-center justify-between">
@@ -28,6 +29,15 @@ const Header: React.FC<HeaderProps> = ({ onManagerMode, onOpenProfile }) => {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {onOpenDashboard && (
+            <button 
+              onClick={onOpenDashboard}
+              className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center hover:bg-zinc-800 transition-colors"
+              title="Dashboard"
+            >
+              <BarChart3 size={14} className="text-zinc-300" />
+            </button>
+          )}
           {onManagerMode && (
             <button 
               onClick={onManagerMode}

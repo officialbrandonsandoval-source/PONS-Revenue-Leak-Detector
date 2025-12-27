@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Check, Shield, Zap, Lock, Loader2, ArrowRight, AlertTriangle } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import { createCheckoutSession } from '../services/billingService';
+import toast from 'react-hot-toast';
 
 // --- STRIPE CONFIGURATION ---
 // ----------------------------
@@ -25,6 +26,7 @@ const UpgradePlan: React.FC<UpgradePlanProps> = ({ onClose }) => {
     } catch (err) {
       console.error('Checkout error', err);
       setError('Stripe checkout failed. Please try again.');
+      toast.error('Stripe checkout failed');
       setProcessingState('IDLE');
     }
   };

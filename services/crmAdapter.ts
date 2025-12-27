@@ -1,7 +1,5 @@
 import { CRMAdapter, CRMCredentials, CRMProvider } from '../types';
-
-// Mock validation delay
-const simulateNetworkDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import { apiJson } from './apiClient';
 
 export const CRM_PROVIDERS: Record<CRMProvider, CRMAdapter> = {
   salesforce: {
@@ -9,9 +7,7 @@ export const CRM_PROVIDERS: Record<CRMProvider, CRMAdapter> = {
     name: 'Salesforce',
     iconName: 'Cloud',
     validate: async (creds: CRMCredentials) => {
-      await simulateNetworkDelay(1800);
-      // Basic mock validation
-      return creds.apiKey.length > 5;
+      return Boolean(creds.apiKey || creds.oauthToken);
     }
   },
   hubspot: {
@@ -19,8 +15,7 @@ export const CRM_PROVIDERS: Record<CRMProvider, CRMAdapter> = {
     name: 'HubSpot',
     iconName: 'Hexagon', // Approximate for HubSpot logo shape in lucide
     validate: async (creds: CRMCredentials) => {
-      await simulateNetworkDelay(1200);
-      return creds.apiKey.length > 5;
+      return Boolean(creds.apiKey || creds.oauthToken);
     }
   },
   pipedrive: {
@@ -28,8 +23,7 @@ export const CRM_PROVIDERS: Record<CRMProvider, CRMAdapter> = {
     name: 'Pipedrive',
     iconName: 'Kanban',
     validate: async (creds: CRMCredentials) => {
-      await simulateNetworkDelay(1500);
-      return creds.apiKey.length > 5;
+      return Boolean(creds.apiKey || creds.oauthToken);
     }
   },
   zoho: {
@@ -37,8 +31,7 @@ export const CRM_PROVIDERS: Record<CRMProvider, CRMAdapter> = {
     name: 'Zoho CRM',
     iconName: 'Box',
     validate: async (creds: CRMCredentials) => {
-      await simulateNetworkDelay(1400);
-      return creds.apiKey.length > 5;
+      return Boolean(creds.apiKey || creds.oauthToken);
     }
   },
   gohighlevel: {
@@ -46,8 +39,7 @@ export const CRM_PROVIDERS: Record<CRMProvider, CRMAdapter> = {
     name: 'GoHighLevel',
     iconName: 'Zap',
     validate: async (creds: CRMCredentials) => {
-      await simulateNetworkDelay(1600);
-      return creds.apiKey.length > 5;
+      return Boolean(creds.apiKey || creds.oauthToken);
     }
   }
 };
@@ -59,18 +51,28 @@ export const authenticateCRM = async (credentials: CRMCredentials): Promise<{ su
       throw new Error('Unsupported CRM Provider');
     }
 
-    if (!credentials.apiKey) {
-        return { success: false, error: 'API Key is required' };
+    if (!credentials.apiKey && !credentials.oauthToken) {
+      return { success: false, error: 'API Key or OAuth Token is required' };
     }
 
     const isValid = await adapter.validate(credentials);
     
     if (isValid) {
+      await apiJson('/api/auth', {
+        method: 'POST',
+        body: JSON.stringify({
+          provider: credentials.provider,
+          apiKey: credentials.apiKey || undefined,
+          oauthToken: credentials.oauthToken || undefined,
+          domain: credentials.domain || undefined,
+        }),
+      });
       return { success: true };
     } else {
       return { success: false, error: 'Invalid API Credentials' };
     }
   } catch (err) {
-    return { success: false, error: 'Connection Timeout' };
+    const message = err instanceof Error ? err.message : 'Connection Failed';
+    return { success: false, error: message || 'Connection Failed' };
   }
 };

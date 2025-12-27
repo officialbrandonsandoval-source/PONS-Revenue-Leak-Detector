@@ -1,6 +1,5 @@
 import { RevenueLeak, Severity } from '../types';
-
-const API_BASE = "https://pons-api-219733399964.us-west1.run.app";
+import { apiFetch, getApiBase } from './apiClient';
 
 // --- BACKEND SCHEMA DEFINITION ---
 interface RawLeakResponse {
@@ -75,7 +74,7 @@ const FALLBACK_LEAKS: RevenueLeak[] = [
 
 export async function runAudit(): Promise<RevenueLeak[]> {
   try {
-    const res = await fetch(`${API_BASE}/audit`, {
+    const res = await apiFetch(`${getApiBase()}/audit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -99,23 +98,6 @@ export async function runAudit(): Promise<RevenueLeak[]> {
     console.warn("API Connection failed, using fallback data for demo continuity.", error);
     // Return fallback data to ensure the demo never fails
     return FALLBACK_LEAKS;
-  }
-}
-
-export async function executeLeakAction(leakId: string, action: string): Promise<boolean> {
-  // PONS API Write-back
-  // In a production environment, this connects to the /execute endpoint
-  // which writes to Salesforce/HubSpot via the configured adapter.
-  try {
-     console.log(`[PONS] Initiating write-back for leak: ${leakId}`);
-     // Simulate network latency for CRM update
-     await new Promise(resolve => setTimeout(resolve, 1500));
-     
-     // Return success
-     return true;
-  } catch (e) {
-     console.error("Execution failed", e);
-     return false;
   }
 }
 
