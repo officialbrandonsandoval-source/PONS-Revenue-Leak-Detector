@@ -3,7 +3,6 @@ import {
   Activity,
   ArrowRight,
   BadgeCheck,
-  Bolt,
   ClipboardCopy,
   Cloud,
   Download,
@@ -218,7 +217,7 @@ const App: React.FC = () => {
             onClick={() => navigate('/')}
           >
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5">
-              <Bolt size={16} />
+              <Zap size={16} />
             </span>
             PONS Ops
           </button>

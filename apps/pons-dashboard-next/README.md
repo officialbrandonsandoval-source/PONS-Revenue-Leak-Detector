@@ -7,15 +7,15 @@ Executive dashboard for revenue leak analysis with CRM selection and Cloud Run i
 1. Install dependencies from repo root:
    `npm install`
 2. In `apps/pons-dashboard-next`, create `.env.local` with:
-   - `NEXT_PUBLIC_API_BASE_URL` (Cloud Run base URL)
-   - `NEXT_PUBLIC_API_KEY` (optional)
+   - `PUBLIC_API_BASE_URL` (Cloud Run base URL)
+   - `API_AUTH_TOKEN` (server-only auth token)
 3. Start the app:
    `npm run dev --workspace apps/pons-dashboard-next`
 
 ## Environment Variables
 
-- `NEXT_PUBLIC_API_BASE_URL` (required)
-- `NEXT_PUBLIC_API_KEY` (optional, passed as `x-api-key`)
+- `PUBLIC_API_BASE_URL` (required)
+- `API_AUTH_TOKEN` (required, passed as Authorization header)
 
 ## Notes
 

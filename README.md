@@ -9,7 +9,7 @@ There is a Next.js App Router dashboard located at `apps/pons-dashboard-next`.
 Quick start:
 1. `npm install`
 2. `cp apps/pons-dashboard-next/.env.example apps/pons-dashboard-next/.env.local`
-3. Set `NEXT_PUBLIC_API_BASE_URL` (and optional `NEXT_PUBLIC_API_KEY`)
+3. Set `PUBLIC_API_BASE_URL`, `API_AUTH_TOKEN`, and `NODE_ENV`
 4. `npm run dev --workspace apps/pons-dashboard-next`
 
 ## Run Locally

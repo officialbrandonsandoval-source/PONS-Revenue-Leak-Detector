@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ApiError, requestInternalJson } from '../../lib/apiClient';
 
 type LeakItem = {
   type: string;
@@ -42,20 +43,22 @@ export default function LeakAnalysisClient() {
     setStatus('loading');
     setError('');
     try {
-      const response = await fetch(`/api/leaks/analyze?crm=${crm}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Analysis failed');
-      }
-
-      const data = (await response.json()) as LeakAnalysisResponse;
+      const data = await requestInternalJson<LeakAnalysisResponse>(
+        `/api/leaks/analyze?crm=${crm}`,
+        { method: 'POST' }
+      );
       setResult(normalize(data));
       setStatus('success');
     } catch (err) {
+      if (err instanceof ApiError) {
+        const message =
+          process.env.NODE_ENV === 'production'
+            ? `Something went wrong. Error ID: ${err.errorId}`
+            : `Request failed (${err.status}). Error ID: ${err.errorId}`;
+        setError(message);
+        setStatus('error');
+        return;
+      }
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Unexpected error');
     }
