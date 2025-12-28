@@ -51,12 +51,8 @@ export default function LeakAnalysisClient() {
       setStatus('success');
     } catch (err) {
       if (err instanceof ApiError) {
-        const message =
-          process.env.NODE_ENV === 'production'
-            ? `Something went wrong. Error ID: ${err.errorId}`
-            : `Request failed (${err.status}). Error ID: ${err.errorId}`;
-        setError(message);
         setStatus('error');
+        setError('Analysis failed');
         return;
       }
       setStatus('error');

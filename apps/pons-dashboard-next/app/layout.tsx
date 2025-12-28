@@ -1,5 +1,4 @@
 import './globals.css';
-import ConsoleGuard from './ui/ConsoleGuard';
 import { validateEnv } from '../lib/env';
 
 export const metadata = {
@@ -12,10 +11,7 @@ validateEnv();
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <ConsoleGuard />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
