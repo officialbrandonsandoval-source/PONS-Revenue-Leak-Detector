@@ -1,198 +1,156 @@
-export type CRMProvider = 'gohighlevel' | 'hubspot';
-export type LeakSeverity = 'low' | 'medium' | 'high' | 'critical';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-export interface LeakSummary {
-  totalRevenueAtRisk: number;
-  recoverableRevenue: number;
-  roiMultiplier: number;
-  leaksFound: number;
+interface ApiOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  body?: any
+  headers?: Record<string, string>
 }
 
-export interface LeakItem {
-  id: string;
-  title: string;
-  severity: LeakSeverity;
-  revenueAtRisk: number;
-  recommendedAction: string;
-  notes?: string;
-  accountName?: string;
+async function apiRequest<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+  const { method = 'GET', body, headers = {} } = options
+  
+  const config: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers,
+    },
+  }
+  
+  if (body) {
+    config.body = JSON.stringify(body)
+  }
+  
+  const response = await fetch(`${API_URL}${endpoint}`, config)
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || `API error: ${response.status}`)
+  }
+  
+  return response.json()
 }
 
-export interface LeakCheckResponse {
-  runId?: string;
-  generatedAt?: string;
-  summary?: LeakSummary;
-  leaks: LeakItem[];
+// CRM Connection
+export interface ConnectRequest {
+  provider: 'ghl' | 'hubspot' | 'salesforce' | 'pipedrive' | 'zoho' | 'webhook'
+  credentials: Record<string, string>
 }
 
-export interface AnalyticsResponse {
-  pipelineValue?: number;
-  atRiskDeals?: number;
-  avgDealSize?: number;
-  winRate?: number;
+export interface ConnectResponse {
+  success: boolean
+  provider: string
+  message: string
 }
 
-const API_KEY_STORAGE = 'pons_api_key';
-const CRM_PROVIDER_STORAGE = 'pons_crm_provider';
-const CRM_TOKEN_PREFIX = 'pons_crm_token_';
-const REPORT_STORAGE = 'pons_last_report';
-const PASSWORD_STORAGE = 'pons_app_auth';
+export async function connectCRM(data: ConnectRequest): Promise<ConnectResponse> {
+  return apiRequest('/connect', { method: 'POST', body: data })
+}
 
-const rawBaseUrl =
-  (import.meta.env.NEXT_PUBLIC_API_BASE_URL as string | undefined) ||
-  (import.meta.env.VITE_PONS_API_URL as string | undefined) ||
-  '';
-const rawApiKey = (import.meta.env.NEXT_PUBLIC_API_KEY as string | undefined) || '';
-const rawAppPassword = (import.meta.env.APP_PASSWORD as string | undefined) || '';
+// Leak Detection
+export interface Leak {
+  id: string
+  type: string
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+  title: string
+  description: string
+  revenueAtRisk: number
+  affectedRecords: number
+  detectedAt: string
+  recommendation: string
+  tags?: string[]
+}
 
-export const getApiBaseUrl = () => rawBaseUrl.trim();
-export const getEnvApiKey = () => rawApiKey.trim();
-export const getEnvAppPassword = () => rawAppPassword.trim();
-
-export const getStoredApiKey = () => {
-  try {
-    return localStorage.getItem(API_KEY_STORAGE) || '';
-  } catch {
-    return '';
+export interface LeaksResponse {
+  success: boolean
+  provider: string
+  leaks: Leak[]
+  summary: {
+    total: number
+    critical: number
+    high: number
+    medium: number
+    low: number
+    totalRevenueAtRisk: number
   }
-};
-
-export const setStoredApiKey = (value: string) => {
-  try {
-    localStorage.setItem(API_KEY_STORAGE, value);
-  } catch {
-    return;
+  repKPIs?: any[]
+  aiInsights?: {
+    criticalIssues: string[]
+    quickWins: string[]
+    weeklyFocus: string
+    healthScore: number
   }
-};
+  analyzedAt: string
+}
 
-export const getStoredCrmProvider = () => {
-  try {
-    return (localStorage.getItem(CRM_PROVIDER_STORAGE) || '') as CRMProvider | '';
-  } catch {
-    return '';
-  }
-};
-
-export const setStoredCrmProvider = (provider: CRMProvider) => {
-  try {
-    localStorage.setItem(CRM_PROVIDER_STORAGE, provider);
-  } catch {
-    return;
-  }
-};
-
-export const getStoredCrmToken = (provider: CRMProvider) => {
-  try {
-    return localStorage.getItem(`${CRM_TOKEN_PREFIX}${provider}`) || '';
-  } catch {
-    return '';
-  }
-};
-
-export const setStoredCrmToken = (provider: CRMProvider, token: string) => {
-  try {
-    localStorage.setItem(`${CRM_TOKEN_PREFIX}${provider}`, token);
-  } catch {
-    return;
-  }
-};
-
-export const getStoredReport = () => {
-  try {
-    const raw = localStorage.getItem(REPORT_STORAGE);
-    return raw ? (JSON.parse(raw) as LeakCheckResponse) : null;
-  } catch {
-    return null;
-  }
-};
-
-export const setStoredReport = (report: LeakCheckResponse) => {
-  try {
-    localStorage.setItem(REPORT_STORAGE, JSON.stringify(report));
-  } catch {
-    return;
-  }
-};
-
-export const clearStoredReport = () => {
-  try {
-    localStorage.removeItem(REPORT_STORAGE);
-  } catch {
-    return;
-  }
-};
-
-export const isPasswordGateUnlocked = () => {
-  try {
-    return localStorage.getItem(PASSWORD_STORAGE) === 'true';
-  } catch {
-    return false;
-  }
-};
-
-export const setPasswordGateUnlocked = (value: boolean) => {
-  try {
-    localStorage.setItem(PASSWORD_STORAGE, value ? 'true' : 'false');
-  } catch {
-    return;
-  }
-};
-
-export const apiFetch = async (path: string, options: RequestInit = {}) => {
-  const baseUrl = getApiBaseUrl();
-  if (!baseUrl) {
-    throw new Error('Missing API base URL. Set NEXT_PUBLIC_API_BASE_URL.');
-  }
-
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const url = `${baseUrl.replace(/\/$/, '')}${normalizedPath}`;
-
-  const headers = new Headers(options.headers);
-  if (!headers.has('Content-Type') && options.body) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  const apiKey = getEnvApiKey() || getStoredApiKey();
-  if (apiKey) {
-    headers.set('x-api-key', apiKey);
-  }
-
-  return fetch(url, { ...options, headers });
-};
-
-export const apiJson = async <T>(path: string, options: RequestInit = {}) => {
-  const res = await apiFetch(path, options);
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(message || 'Request failed');
-  }
-  return res.json() as Promise<T>;
-};
-
-export const runLeakCheck = async (crmProvider: CRMProvider) => {
-  const token = getStoredCrmToken(crmProvider);
-  if (!token) {
-    throw new Error('Missing CRM token. Connect your CRM first.');
-  }
-
-  return apiJson<LeakCheckResponse>(`/api/leaks?crm=${crmProvider}`, {
+export async function runLeakDetection(
+  provider: string,
+  credentials: Record<string, string>
+): Promise<LeaksResponse> {
+  return apiRequest('/leaks', {
     method: 'POST',
-    headers: {
-      'x-crm-token': token,
-    },
-    body: JSON.stringify({ token }),
-  });
-};
+    body: { provider, credentials },
+  })
+}
 
-export const getAnalytics = async (crmProvider: CRMProvider) => {
-  const token = getStoredCrmToken(crmProvider);
-  if (!token) {
-    throw new Error('Missing CRM token. Connect your CRM first.');
-  }
+export async function getLeakSummary(
+  provider: string,
+  credentials: Record<string, string>
+): Promise<LeaksResponse> {
+  return apiRequest('/leaks/summary', {
+    method: 'POST',
+    body: { provider, credentials },
+  })
+}
 
-  return apiJson<AnalyticsResponse>(`/api/analytics?crm=${crmProvider}`, {
-    headers: {
-      'x-crm-token': token,
-    },
-  });
-};
+// Rep KPIs
+export interface RepKPI {
+  repId: string
+  repName: string
+  totalDeals: number
+  openDeals: number
+  wonDeals: number
+  lostDeals: number
+  winRate: number
+  totalRevenue: number
+  avgDealSize: number
+  activityCount: number
+  staleDeals: number
+}
+
+export async function getRepKPIs(
+  provider: string,
+  credentials: Record<string, string>
+): Promise<{ success: boolean; repKPIs: RepKPI[] }> {
+  return apiRequest('/reps/kpis', {
+    method: 'POST',
+    body: { provider, credentials },
+  })
+}
+
+// Executive Report
+export interface ExecutiveReport {
+  success: boolean
+  report: string
+  generatedAt: string
+}
+
+export async function getExecutiveReport(
+  provider: string,
+  credentials: Record<string, string>
+): Promise<ExecutiveReport> {
+  return apiRequest('/reports/executive', {
+    method: 'POST',
+    body: { provider, credentials },
+  })
+}
+
+// Health Check
+export async function checkHealth(): Promise<{ status: string; timestamp: string }> {
+  return apiRequest('/health')
+}
+
+// Providers List
+export async function getProviders(): Promise<{ providers: string[] }> {
+  return apiRequest('/providers')
+}

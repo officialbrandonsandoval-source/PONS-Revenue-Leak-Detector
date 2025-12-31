@@ -1,53 +1,96 @@
-# PONS Dashboard (MVP)
+# PONS Dashboard
 
-An iPhone-first dashboard for connecting a CRM, running leak detection, and sharing ROI-driven results.
+Mobile-first revenue intelligence dashboard. Voice-first interface for detecting revenue leaks, scoring leads, and prioritizing deals.
 
-## Next.js Dashboard
+## Features
 
-There is a Next.js App Router dashboard located at `apps/pons-dashboard-next`.
+- **Connect Data Source**: Salesforce, HubSpot, Pipedrive, Zoho, GoHighLevel
+- **Run Revenue Audit**: ~30 second pipeline analysis
+- **Leak Detection Cards**: Severity badges, revenue at risk, SLA breach alerts
+- **Voice Mode**: Lightning orb interface for hands-free interaction
+- **Chat Interface**: PONS Analyst with Fast Response / Deep Reasoning modes
+- **Manager Mode**: Executive intelligence tier (gold accent)
+- **PWA Support**: Install as mobile app
 
-Quick start:
-1. `npm install`
-2. `cp apps/pons-dashboard-next/.env.example apps/pons-dashboard-next/.env.local`
-3. Set `PUBLIC_API_BASE_URL`, `API_AUTH_TOKEN`, and `NODE_ENV`
-4. `npm run dev --workspace apps/pons-dashboard-next`
+## Quick Start
 
-## Run Locally
+```bash
+# Install dependencies
+npm install
 
-1. Install dependencies:
-   `npm install`
-2. Copy `.env.example` to `.env.local` and set values.
-3. Start the dev server:
-   `npm run dev`
+# Set environment variables
+cp .env.example .env.local
+# Edit .env.local with your API URL and Supabase credentials
 
-## Required Environment Variables
+# Run development server
+npm run dev
+```
 
-Frontend runtime config (Cloud Run + auth gate):
+Open [http://localhost:3000](http://localhost:3000)
 
-- `NEXT_PUBLIC_API_BASE_URL` (Cloud Run base URL, e.g. `https://pons-api-xyz.a.run.app`)
-- `APP_PASSWORD` (simple password gate for `/app` routes)
+## Environment Variables
 
-Optional:
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | PONS API backend URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 
-- `NEXT_PUBLIC_API_KEY` (x-api-key header; if missing, the UI will prompt for a key and store in localStorage)
-- `VITE_PONS_API_URL` (legacy fallback for local development)
+## Deployment
 
-## MVP Flow
+### Vercel (Recommended)
 
-1. `/app/connect` → select CRM + paste token (stored in localStorage for now).
-2. `/app/run` → calls `POST /api/leaks?crm=...`.
-3. `/app/results` → summary KPIs, leak list, next actions, report export.
+```bash
+# Deploy to Vercel
+vercel
 
-## Vercel Setup
+# Or connect GitHub repo to Vercel for auto-deploys
+```
 
-1. Set environment variables:
-   - `NEXT_PUBLIC_API_BASE_URL`
-   - `APP_PASSWORD`
-   - `NEXT_PUBLIC_API_KEY` (optional)
-2. Redeploy the project.
-3. Open `/app` and unlock using `APP_PASSWORD`.
+### Manual Build
 
-## Notes
+```bash
+npm run build
+npm start
+```
 
-- If env vars are missing at runtime, the app shows a setup screen instead of crashing.
-- No backend changes are required in this repo.
+## Project Structure
+
+```
+app/
+  page.tsx              # Connect Data Source
+  layout.tsx            # Root layout with AppProvider
+  globals.css           # PONS design system
+  dashboard/
+    layout.tsx          # Dashboard layout with nav
+    page.tsx            # Audit button + results
+    voice/page.tsx      # Voice mode interface
+    chat/page.tsx       # PONS Analyst chat
+lib/
+  api.ts               # API client
+  store.tsx            # App state (React Context)
+  supabase.ts          # Supabase client
+  utils.ts             # Utility functions
+```
+
+## Design System
+
+- **Background**: Pure black (#000000)
+- **Blue Accent**: #3b82f6 (selections, standard mode)
+- **Gold Accent**: #f59e0b (manager mode, premium)
+- **Red**: #ef4444 (critical alerts, leaks)
+- **Cards**: #1a1a1a with #2a2a2a borders
+
+## API Integration
+
+Dashboard expects PONS API v2.0.0 endpoints:
+
+- `POST /connect` - Test CRM connection
+- `POST /leaks` - Full leak analysis
+- `POST /leaks/summary` - Quick summary
+- `POST /reps/kpis` - Rep performance data
+- `POST /reports/executive` - AI executive report
+
+## License
+
+Proprietary - PONS Solutions
