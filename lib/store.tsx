@@ -1,134 +1,109 @@
-'use client'
+'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Leak, LeaksResponse, RepKPI } from './api'
+import { createContext, useContext, useState, ReactNode } from 'react';
 
-interface CRMConnection {
-  provider: string
-  credentials: Record<string, string>
-  connected: boolean
-  connectedAt?: string
+interface Leak {
+  id: string;
+  type: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  description: string;
+  recommendedAction: string;
+  impactedCount: number;
+  estimatedRevenue: number;
+  relatedIds: string[];
+  metadata?: Record<string, unknown>;
+}
+
+interface RepKPI {
+  repId: string;
+  repName: string;
+  totalOpportunities: number;
+  openOpportunities: number;
+  wonOpportunities: number;
+  winRate: number;
+  totalRevenue: number;
+  activitiesThisWeek: number;
+  staleDeals: number;
 }
 
 interface AppState {
-  // Connection
-  connection: CRMConnection | null
-  setConnection: (conn: CRMConnection | null) => void
-  
-  // Audit Results
-  leaks: Leak[]
-  setLeaks: (leaks: Leak[]) => void
-  leakSummary: LeaksResponse['summary'] | null
-  setLeakSummary: (summary: LeaksResponse['summary'] | null) => void
-  aiInsights: LeaksResponse['aiInsights'] | null
-  setAiInsights: (insights: LeaksResponse['aiInsights'] | null) => void
-  
-  // Rep Data
-  repKPIs: RepKPI[]
-  setRepKPIs: (kpis: RepKPI[]) => void
-  
-  // UI State
-  isLoading: boolean
-  setIsLoading: (loading: boolean) => void
-  isManagerMode: boolean
-  setIsManagerMode: (mode: boolean) => void
-  isUpgradeMode: boolean
-  setIsUpgradeMode: (mode: boolean) => void
-  
-  // Voice State
-  isVoiceActive: boolean
-  setIsVoiceActive: (active: boolean) => void
-  voiceTranscript: string
-  setVoiceTranscript: (text: string) => void
-  
-  // Clear all data
-  clearAll: () => void
+  isConnected: boolean;
+  crmType: string | null;
+  leaks: Leak[];
+  repKPIs: RepKPI[];
+  isVoiceActive: boolean;
+  isManagerMode: boolean;
+  setConnected: (connected: boolean, crm?: string) => void;
+  setLeaks: (leaks: Leak[]) => void;
+  setRepKPIs: (kpis: RepKPI[]) => void;
+  setVoiceActive: (active: boolean) => void;
+  setManagerMode: (active: boolean) => void;
+  disconnect: () => void;
 }
 
-const AppContext = createContext<AppState | null>(null)
-
-const STORAGE_KEY = 'pons_connection'
+const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [connection, setConnectionState] = useState<CRMConnection | null>(null)
-  const [leaks, setLeaks] = useState<Leak[]>([])
-  const [leakSummary, setLeakSummary] = useState<LeaksResponse['summary'] | null>(null)
-  const [aiInsights, setAiInsights] = useState<LeaksResponse['aiInsights'] | null>(null)
-  const [repKPIs, setRepKPIs] = useState<RepKPI[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isManagerMode, setIsManagerMode] = useState(false)
-  const [isUpgradeMode, setIsUpgradeMode] = useState(false)
-  const [isVoiceActive, setIsVoiceActive] = useState(false)
-  const [voiceTranscript, setVoiceTranscript] = useState('')
-  
-  // Load connection from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        setConnectionState(parsed)
-      } catch (e) {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }
-  }, [])
-  
-  // Save connection to localStorage
-  const setConnection = (conn: CRMConnection | null) => {
-    setConnectionState(conn)
-    if (conn) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(conn))
-    } else {
-      localStorage.removeItem(STORAGE_KEY)
-    }
-  }
-  
-  const clearAll = () => {
-    setConnection(null)
-    setLeaks([])
-    setLeakSummary(null)
-    setAiInsights(null)
-    setRepKPIs([])
-    setIsManagerMode(false)
-    setIsUpgradeMode(false)
-  }
-  
+  const [isConnected, setIsConnected] = useState(false);
+  const [crmType, setCrmType] = useState<string | null>(null);
+  const [leaks, setLeaksState] = useState<Leak[]>([]);
+  const [repKPIs, setRepKPIsState] = useState<RepKPI[]>([]);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [isManagerMode, setIsManagerMode] = useState(false);
+
+  const setConnected = (connected: boolean, crm?: string) => {
+    setIsConnected(connected);
+    if (crm) setCrmType(crm);
+  };
+
+  const setLeaks = (newLeaks: Leak[]) => {
+    setLeaksState(newLeaks);
+  };
+
+  const setRepKPIs = (kpis: RepKPI[]) => {
+    setRepKPIsState(kpis);
+  };
+
+  const setVoiceActive = (active: boolean) => {
+    setIsVoiceActive(active);
+  };
+
+  const setManagerMode = (active: boolean) => {
+    setIsManagerMode(active);
+  };
+
+  const disconnect = () => {
+    setIsConnected(false);
+    setCrmType(null);
+    setLeaksState([]);
+    setRepKPIsState([]);
+  };
+
   return (
-    <AppContext.Provider
-      value={{
-        connection,
-        setConnection,
-        leaks,
-        setLeaks,
-        leakSummary,
-        setLeakSummary,
-        aiInsights,
-        setAiInsights,
-        repKPIs,
-        setRepKPIs,
-        isLoading,
-        setIsLoading,
-        isManagerMode,
-        setIsManagerMode,
-        isUpgradeMode,
-        setIsUpgradeMode,
-        isVoiceActive,
-        setIsVoiceActive,
-        voiceTranscript,
-        setVoiceTranscript,
-        clearAll,
-      }}
-    >
+    <AppContext.Provider value={{
+      isConnected,
+      crmType,
+      leaks,
+      repKPIs,
+      isVoiceActive,
+      isManagerMode,
+      setConnected,
+      setLeaks,
+      setRepKPIs,
+      setVoiceActive,
+      setManagerMode,
+      disconnect
+    }}>
       {children}
     </AppContext.Provider>
-  )
+  );
 }
 
 export function useApp() {
-  const context = useContext(AppContext)
-  if (!context) {
-    throw new Error('useApp must be used within AppProvider')
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
   }
-  return context
+  return context;
 }

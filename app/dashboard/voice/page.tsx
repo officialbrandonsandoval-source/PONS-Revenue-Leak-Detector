@@ -1,128 +1,109 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { useApp } from '@/lib/store'
-import { Mic, X, Zap } from 'lucide-react'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useApp } from '@/lib/store';
+import { ArrowLeft, Mic, MicOff } from 'lucide-react';
 
 export default function VoicePage() {
-  const router = useRouter()
-  const { isManagerMode, isVoiceActive, setIsVoiceActive, voiceTranscript, setVoiceTranscript } = useApp()
-  const [isListening, setIsListening] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const recognitionRef = useRef<any>(null)
-
-  // Initialize speech recognition
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition
-      recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = true
-      recognitionRef.current.interimResults = true
-      
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join('')
-        setVoiceTranscript(transcript)
-      }
-      
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error)
-        setIsListening(false)
-      }
-      
-      recognitionRef.current.onend = () => {
-        setIsListening(false)
-      }
-    }
-    
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
-      }
-    }
-  }, [setVoiceTranscript])
+  const router = useRouter();
+  const { isManagerMode, isVoiceActive, setVoiceActive, leaks } = useApp();
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
 
   const toggleListening = () => {
     if (isListening) {
-      recognitionRef.current?.stop()
-      setIsListening(false)
+      setIsListening(false);
+      setVoiceActive(false);
     } else {
-      recognitionRef.current?.start()
-      setIsListening(true)
-      setVoiceTranscript('')
+      setIsListening(true);
+      setVoiceActive(true);
+      
+      // Simulate voice recognition
+      setTimeout(() => {
+        setTranscript('What are my critical leaks?');
+        setTimeout(() => {
+          setIsListening(false);
+        }, 2000);
+      }, 1500);
     }
-  }
+  };
 
-  const handleClose = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop()
-    }
-    setIsListening(false)
-    setIsVoiceActive(false)
-    router.push('/dashboard')
-  }
+  const criticalCount = leaks.filter(l => l.severity === 'CRITICAL').length;
+  const totalRisk = leaks.reduce((sum, l) => sum + l.estimatedRevenue, 0);
 
   return (
-    <div className="fixed inset-0 bg-pons-black flex flex-col items-center justify-center safe-area-top safe-area-bottom">
-      {/* Manager Mode Badge */}
-      {isManagerMode && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2">
-          <div className="manager-badge flex items-center gap-2">
-            <span className="text-pons-gold">👑</span>
-            <span>MANAGER MODE ACTIVE</span>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-black flex flex-col">
+      {/* Header */}
+      <header className="px-4 py-3 flex items-center justify-between">
+        <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2">
+          <ArrowLeft className="w-5 h-5 text-gray-400" />
+        </button>
+        {isManagerMode && (
+          <span className="px-3 py-1 bg-amber-500/20 text-amber-500 text-xs rounded-full">
+            Manager Mode
+          </span>
+        )}
+      </header>
 
-      {/* Voice Orb */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div 
-          className={`voice-orb ${isManagerMode ? 'voice-orb-gold' : 'voice-orb-blue'} ${
-            isListening ? 'animate-pulse-slow' : ''
-          }`}
-        >
-          <Zap size={48} className="text-white" />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        {/* Voice Orb */}
+        <div className="relative mb-8">
+          <div className={`w-48 h-48 rounded-full flex items-center justify-center transition-all duration-500 ${
+            isListening 
+              ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-[0_0_60px_rgba(59,130,246,0.5)]' 
+              : 'bg-gradient-to-br from-gray-700 to-gray-900'
+          }`}>
+            <div className={`w-32 h-32 rounded-full flex items-center justify-center ${
+              isListening 
+                ? 'bg-gradient-to-br from-amber-400 to-amber-600 animate-pulse' 
+                : 'bg-gradient-to-br from-gray-600 to-gray-800'
+            }`}>
+              {isListening ? (
+                <Mic className="w-12 h-12 text-white" />
+              ) : (
+                <MicOff className="w-12 h-12 text-gray-400" />
+              )}
+            </div>
+          </div>
+          
+          {isListening && (
+            <div className="absolute inset-0 rounded-full animate-ping bg-blue-500/20" />
+          )}
         </div>
-        
-        <h2 className="text-2xl font-semibold mt-8 text-white">
-          {isManagerMode ? 'Executive Intelligence Online' : 'Live Intelligence Active'}
+
+        {/* Status Text */}
+        <h2 className="text-xl font-semibold text-white mb-2">
+          {isListening ? 'Listening...' : 'Tap to Speak'}
         </h2>
-        <p className="text-gray-400 mt-2">
-          {isListening ? 'Listening... Speak naturally.' : 'Tap the mic to start'}
+        <p className="text-gray-400 text-center mb-8">
+          {isListening 
+            ? 'Ask about your pipeline, leaks, or what to do next'
+            : `${criticalCount} critical leaks • $${(totalRisk/1000).toFixed(0)}k at risk`
+          }
         </p>
 
-        {/* Transcript Display */}
-        {voiceTranscript && (
-          <div className="mt-8 px-6 max-w-sm">
-            <p className="text-gray-300 text-center italic">"{voiceTranscript}"</p>
+        {/* Transcript */}
+        {transcript && (
+          <div className="w-full max-w-sm bg-gray-900/50 rounded-xl p-4 mb-8">
+            <p className="text-sm text-gray-400 mb-1">You said:</p>
+            <p className="text-white">{transcript}</p>
           </div>
         )}
-      </div>
 
-      {/* Bottom Controls */}
-      <div className="flex items-center gap-4 pb-8">
-        {/* Mic Button */}
+        {/* Action Button */}
         <button
           onClick={toggleListening}
-          className={`w-14 h-14 rounded-full flex items-center justify-center ${
-            isListening 
-              ? 'bg-pons-gray border-2 border-white' 
-              : 'bg-pons-gray border border-gray-700'
+          className={`w-full max-w-sm py-4 rounded-xl font-semibold transition-all ${
+            isListening
+              ? 'bg-red-600 hover:bg-red-500 text-white'
+              : 'bg-blue-600 hover:bg-blue-500 text-white'
           }`}
         >
-          <Mic size={24} className={isListening ? 'text-white' : 'text-gray-400'} />
-        </button>
-
-        {/* Close Button */}
-        <button
-          onClick={handleClose}
-          className="w-14 h-14 rounded-full bg-pons-red-dark flex items-center justify-center"
-        >
-          <X size={24} className="text-pons-red" />
+          {isListening ? 'Stop Listening' : 'Start Voice Mode'}
         </button>
       </div>
     </div>
-  )
+  );
 }

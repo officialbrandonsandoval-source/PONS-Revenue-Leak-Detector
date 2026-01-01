@@ -1,209 +1,148 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useApp } from '@/lib/store'
-import { X, Zap, Settings2, Send } from 'lucide-react'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useApp } from '@/lib/store';
+import { ArrowLeft, Send, Zap, Brain } from 'lucide-react';
 
 interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export default function ChatPage() {
-  const router = useRouter()
-  const { connection, leaks, leakSummary, aiInsights } = useApp()
+  const router = useRouter();
+  const { leaks } = useApp();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'PONS Intelligence Online. What is your query?',
-      timestamp: new Date(),
-    },
-  ])
-  const [input, setInput] = useState('')
-  const [mode, setMode] = useState<'fast' | 'deep'>('fast')
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+      content: `I've analyzed your pipeline and found ${leaks.length} revenue leaks totaling $${leaks.reduce((sum, l) => sum + l.estimatedRevenue, 0).toLocaleString()} at risk. What would you like to know?`
+    }
+  ]);
+  const [input, setInput] = useState('');
+  const [isDeepMode, setIsDeepMode] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || loading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
-      timestamp: new Date(),
-    }
+      content: input
+    };
 
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setIsLoading(true)
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
 
-    // Simulate AI response (in production, this calls the PONS API)
+    // Simulate AI response
     setTimeout(() => {
-      const response = generateResponse(userMessage.content, { leaks, leakSummary, aiInsights })
-      const assistantMessage: Message = {
+      const criticalLeaks = leaks.filter(l => l.severity === 'CRITICAL');
+      const highLeaks = leaks.filter(l => l.severity === 'HIGH');
+      
+      let response = '';
+      if (input.toLowerCase().includes('critical') || input.toLowerCase().includes('urgent')) {
+        response = criticalLeaks.length > 0 
+          ? `You have ${criticalLeaks.length} critical issues:\n\n${criticalLeaks.map(l => `• ${l.title}: ${l.description}`).join('\n\n')}\n\nI recommend addressing these immediately.`
+          : 'No critical leaks detected. Your highest priority items are in the HIGH category.';
+      } else if (input.toLowerCase().includes('action') || input.toLowerCase().includes('do')) {
+        const topLeak = leaks[0];
+        response = topLeak 
+          ? `Your top priority: ${topLeak.title}\n\n${topLeak.description}\n\nRecommended action: ${topLeak.recommendedAction}`
+          : 'No immediate actions required. Your pipeline looks healthy.';
+      } else {
+        response = `Based on my analysis:\n\n• ${leaks.length} total leaks detected\n• ${criticalLeaks.length} critical, ${highLeaks.length} high priority\n• $${leaks.reduce((sum, l) => sum + l.estimatedRevenue, 0).toLocaleString()} total revenue at risk\n\nAsk me about specific leaks or what actions to take.`;
+      }
+
+      setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, mode === 'fast' ? 500 : 1500)
-  }
-
-  const handleClose = () => {
-    router.push('/dashboard')
-  }
+        content: response
+      }]);
+      setLoading(false);
+    }, 1000);
+  };
 
   return (
-    <div className="fixed inset-0 bg-pons-black flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800 safe-area-top">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-pons-green" />
-          <span className="font-semibold">PONS Analyst</span>
+      <header className="sticky top-0 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-4 py-3 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2">
+              <ArrowLeft className="w-5 h-5 text-gray-400" />
+            </button>
+            <div>
+              <h1 className="font-semibold text-white">PONS Analyst</h1>
+              <p className="text-xs text-gray-500">AI Revenue Intelligence</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsDeepMode(!isDeepMode)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
+              isDeepMode ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'
+            }`}
+          >
+            {isDeepMode ? <Brain className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+            {isDeepMode ? 'Deep' : 'Fast'}
+          </button>
         </div>
-        <button onClick={handleClose}>
-          <X size={24} className="text-gray-400" />
-        </button>
       </header>
 
-      {/* Mode Toggle */}
-      <div className="flex p-2 gap-2">
-        <button
-          onClick={() => setMode('fast')}
-          className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold ${
-            mode === 'fast'
-              ? 'bg-pons-blue text-white'
-              : 'bg-pons-gray text-gray-400'
-          }`}
-        >
-          <Zap size={16} />
-          FAST RESPONSE
-        </button>
-        <button
-          onClick={() => setMode('deep')}
-          className={`flex-1 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold ${
-            mode === 'deep'
-              ? 'bg-pons-blue text-white'
-              : 'bg-pons-gray text-gray-400'
-          }`}
-        >
-          <Settings2 size={16} />
-          DEEP REASONING
-        </button>
-      </div>
-
       {/* Messages */}
-      <div className="flex-1 overflow-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`max-w-[85%] ${
-              message.role === 'user' ? 'ml-auto' : 'mr-auto'
-            }`}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`rounded-2xl px-4 py-3 ${
+              className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                 message.role === 'user'
-                  ? 'bg-pons-gray text-white rounded-br-md'
-                  : 'bg-pons-blue/20 border border-pons-blue/30 text-white rounded-bl-md'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-100'
               }`}
             >
-              <p className="text-sm leading-relaxed">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
             </div>
           </div>
         ))}
-        
-        {/* Loading Indicator */}
-        {isLoading && (
-          <div className="max-w-[85%] mr-auto">
-            <div className="bg-pons-blue/20 border border-pons-blue/30 rounded-2xl rounded-bl-md px-4 py-3">
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-800 rounded-2xl px-4 py-3">
               <div className="flex gap-1">
-                <div className="w-2 h-2 bg-pons-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-pons-blue rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-pons-blue rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
               </div>
             </div>
           </div>
         )}
-        
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="px-4 py-4 border-t border-gray-800 safe-area-bottom">
+      <div className="sticky bottom-0 bg-black border-t border-gray-800 p-4">
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask for a quick definition or status..."
-            className="flex-1"
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            placeholder="Ask about your pipeline..."
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              input.trim() && !isLoading
-                ? 'bg-pons-blue text-white'
-                : 'bg-pons-gray text-gray-500'
-            }`}
+            disabled={!input.trim() || loading}
+            className="p-3 bg-blue-600 rounded-xl text-white disabled:opacity-50 hover:bg-blue-500 transition-colors"
           >
-            <Send size={18} />
+            <Send className="w-5 h-5" />
           </button>
         </div>
       </div>
     </div>
-  )
-}
-
-// Simple response generator (replace with actual API call)
-function generateResponse(
-  query: string, 
-  context: { leaks: any[]; leakSummary: any; aiInsights: any }
-): string {
-  const q = query.toLowerCase()
-  
-  if (q.includes('highest revenue') || q.includes('best action') || q.includes('priority')) {
-    if (context.leaks.length > 0) {
-      const topLeak = context.leaks[0]
-      return `Your highest revenue action today: ${topLeak.title}. ${topLeak.description} Revenue at risk: $${topLeak.revenueAtRisk?.toLocaleString() || 'Unknown'}. Take action immediately.`
-    }
-    return 'To determine your highest revenue action today, I require access to your sales data, CRM, and transaction logs. Provide access credentials immediately.'
-  }
-  
-  if (q.includes('leak') || q.includes('risk')) {
-    if (context.leakSummary) {
-      return `Current status: ${context.leakSummary.total} revenue leaks detected. ${context.leakSummary.critical} critical, ${context.leakSummary.high} high priority. Total revenue at risk: $${context.leakSummary.totalRevenueAtRisk?.toLocaleString() || 0}.`
-    }
-    return 'Run a revenue audit first to detect leaks in your pipeline.'
-  }
-  
-  if (q.includes('health') || q.includes('score')) {
-    if (context.aiInsights?.healthScore) {
-      return `Pipeline health score: ${context.aiInsights.healthScore}/100. ${context.aiInsights.weeklyFocus || 'Focus on closing stale deals this week.'}`
-    }
-    return 'Run a revenue audit to calculate your pipeline health score.'
-  }
-  
-  if (q.includes('quick win') || q.includes('easy')) {
-    if (context.aiInsights?.quickWins?.length) {
-      return `Quick wins available: ${context.aiInsights.quickWins.slice(0, 3).join('. ')}`
-    }
-    return 'Run a revenue audit to identify quick wins in your pipeline.'
-  }
-  
-  return 'Query received. Specify: revenue actions, leak status, pipeline health, or quick wins. Be direct.'
+  );
 }

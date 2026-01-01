@@ -1,189 +1,195 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useApp } from '@/lib/store'
-import { runLeakDetection } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
-import { Play, Volume2, ChevronDown, Settings2 } from 'lucide-react'
+import { useApp } from '@/lib/store';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, TrendingDown, Clock, Users, RefreshCw, LogOut } from 'lucide-react';
+
+const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+  CRITICAL: { bg: 'bg-red-500/10', border: 'border-red-500/50', text: 'text-red-400', badge: 'bg-red-500' },
+  HIGH: { bg: 'bg-orange-500/10', border: 'border-orange-500/50', text: 'text-orange-400', badge: 'bg-orange-500' },
+  MEDIUM: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/50', text: 'text-yellow-400', badge: 'bg-yellow-500' },
+  LOW: { bg: 'bg-blue-500/10', border: 'border-blue-500/50', text: 'text-blue-400', badge: 'bg-blue-500' },
+};
+
+const typeIcons: Record<string, typeof AlertTriangle> = {
+  STALE_OPPORTUNITY: Clock,
+  HIGH_VALUE_AT_RISK: TrendingDown,
+  NO_ACTIVITY_REP: Users,
+  ABANDONED_DEAL: AlertTriangle,
+  LOST_WITHOUT_REASON: AlertTriangle,
+  UNTOUCHED_LEAD: Clock,
+  SLOW_RESPONSE: Clock,
+  DEAD_PIPELINE: TrendingDown,
+};
 
 export default function DashboardPage() {
-  const { 
-    connection, 
-    leaks, 
-    setLeaks, 
-    leakSummary, 
-    setLeakSummary,
-    setAiInsights,
-    isLoading, 
-    setIsLoading,
-    isUpgradeMode,
-    setIsUpgradeMode
-  } = useApp()
-  
-  const [hasRunAudit, setHasRunAudit] = useState(false)
-  const [auditError, setAuditError] = useState<string | null>(null)
+  const router = useRouter();
+  const { isConnected, crmType, leaks, disconnect, setLeaks } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleRunAudit = async () => {
-    if (!connection) return
-    
-    setIsLoading(true)
-    setAuditError(null)
-    
-    try {
-      const result = await runLeakDetection(
-        connection.provider,
-        connection.credentials
-      )
-      
-      if (result.success) {
-        setLeaks(result.leaks)
-        setLeakSummary(result.summary)
-        if (result.aiInsights) {
-          setAiInsights(result.aiInsights)
-        }
-        setHasRunAudit(true)
-      } else {
-        setAuditError('Audit failed. Please try again.')
-      }
-    } catch (err: any) {
-      setAuditError(err.message || 'Audit failed')
-    } finally {
-      setIsLoading(false)
+  useEffect(() => {
+    if (!isConnected) {
+      router.push('/');
     }
-  }
+  }, [isConnected, router]);
 
-  // Show audit button if no results yet
-  if (!hasRunAudit && leaks.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col px-4">
-        {/* Audit Scope Header */}
-        <div className="flex items-center justify-between py-3 border-b border-gray-800">
-          <div className="flex items-center gap-2 text-gray-400">
-            <Settings2 size={16} />
-            <span className="text-xs font-semibold tracking-wider">AUDIT SCOPE</span>
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pons-api.vercel.app'}/leaks/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunities: [
+            { id: '1', name: 'Acme Corp Deal', value: 45000, stage: 'proposal', status: 'open', contactId: 'c1', createdAt: '2025-09-01', updatedAt: '2025-09-15', assignedTo: 'rep1' },
+            { id: '2', name: 'TechStart Contract', value: 125000, stage: 'negotiation', status: 'open', contactId: 'c2', createdAt: '2025-10-01', updatedAt: '2025-10-20', assignedTo: 'rep1' },
+            { id: '3', name: 'GlobalCo Partnership', value: 85000, stage: 'discovery', status: 'open', contactId: 'c3', createdAt: '2025-11-01', updatedAt: '2025-11-10', assignedTo: 'rep2' },
+            { id: '4', name: 'Lost Opportunity', value: 35000, status: 'lost', lostReason: '', contactId: 'c4', createdAt: '2025-10-15', updatedAt: '2025-12-01' },
+            { id: '5', name: 'MegaCorp Enterprise', value: 250000, stage: 'proposal', status: 'open', contactId: 'c5', createdAt: '2025-08-15', updatedAt: '2025-09-01', assignedTo: 'rep1' },
+          ],
+          activities: [
+            { id: 'a1', contactId: 'c1', type: 'call', performedBy: 'rep1', createdAt: '2025-09-15', outcome: 'completed' },
+            { id: 'a2', contactId: 'c2', type: 'email', performedBy: 'rep1', createdAt: '2025-10-20', outcome: 'completed' },
+          ],
+          leads: [
+            { id: 'l1', firstName: 'New', lastName: 'Prospect', status: 'new', createdAt: '2025-12-20', leadSource: 'Website' },
+            { id: 'l2', firstName: 'Warm', lastName: 'Lead', status: 'new', createdAt: '2025-12-01', leadSource: 'Referral' },
+          ],
+          contacts: [
+            { id: 'c1', name: 'John Smith', email: 'john@acme.com' },
+            { id: 'c2', name: 'Sarah Johnson', email: 'sarah@techstart.com' },
+            { id: 'c3', name: 'Mike Williams', email: 'mike@globalco.com' },
+            { id: 'c4', name: 'Lisa Brown', email: '' },
+            { id: 'c5', name: 'David Chen', email: 'david@megacorp.com' },
+          ],
+          reps: [
+            { id: 'rep1', name: 'Alex Turner', active: true },
+            { id: 'rep2', name: 'Jordan Lee', active: true },
+          ],
+          includeAI: false
+        })
+      });
+      const data = await response.json();
+      setLeaks(data.leaks || []);
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    router.push('/');
+  };
+
+  const totalRevenue = leaks.reduce((sum, l) => sum + l.estimatedRevenue, 0);
+  const criticalCount = leaks.filter(l => l.severity === 'CRITICAL').length;
+  const highCount = leaks.filter(l => l.severity === 'HIGH').length;
+
+  if (!isConnected) return null;
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="sticky top-0 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-4 py-3 z-10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-blue-500">PONS</h1>
+            <p className="text-xs text-gray-500">Connected: {crmType?.toUpperCase()}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500">UPGRADE MODE</span>
-            <button 
-              onClick={() => setIsUpgradeMode(!isUpgradeMode)}
-              className={`toggle ${isUpgradeMode ? 'active' : ''}`}
-            />
-            <ChevronDown size={16} className="text-gray-500" />
+          <div className="flex items-center gap-2">
+            <button onClick={handleRefresh} disabled={refreshing}
+              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors disabled:opacity-50">
+              <RefreshCw className={`w-5 h-5 text-gray-400 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={handleDisconnect}
+              className="p-2 rounded-lg bg-gray-800 hover:bg-red-900/50 transition-colors">
+              <LogOut className="w-5 h-5 text-gray-400" />
+            </button>
           </div>
         </div>
+      </header>
 
-        {/* Run Audit Button */}
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <button
-            onClick={handleRunAudit}
-            disabled={isLoading}
-            className="btn-primary flex items-center gap-3 text-lg px-12 py-5"
-          >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                RUN REVENUE AUDIT
-                <Play size={20} fill="black" />
-              </>
-            )}
+      {/* Summary Cards */}
+      <div className="p-4 grid grid-cols-2 gap-3">
+        <div className="bg-gradient-to-br from-red-900/30 to-red-900/10 rounded-xl p-4 border border-red-500/20">
+          <p className="text-red-400 text-xs font-medium mb-1">REVENUE AT RISK</p>
+          <p className="text-2xl font-bold text-white">${(totalRevenue / 1000).toFixed(0)}k</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-900/30 to-orange-900/10 rounded-xl p-4 border border-orange-500/20">
+          <p className="text-orange-400 text-xs font-medium mb-1">ACTIVE LEAKS</p>
+          <p className="text-2xl font-bold text-white">{leaks.length}</p>
+          <p className="text-xs text-gray-500">{criticalCount} critical, {highCount} high</p>
+        </div>
+      </div>
+
+      {/* Leaks List */}
+      <div className="px-4 pb-24">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
+          Revenue Leaks Detected
+        </h2>
+
+        {leaks.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>No leaks detected</p>
+            <p className="text-sm mt-1">Your pipeline looks healthy!</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {leaks.map((leak) => {
+              const config = severityConfig[leak.severity] || severityConfig.MEDIUM;
+              const Icon = typeIcons[leak.type] || AlertTriangle;
+              
+              return (
+                <div key={leak.id} className={`rounded-xl p-4 border ${config.bg} ${config.border}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`w-5 h-5 ${config.text}`} />
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${config.badge} text-white`}>
+                        {leak.severity}
+                      </span>
+                    </div>
+                    {leak.estimatedRevenue > 0 && (
+                      <span className="text-sm font-semibold text-white">
+                        ${leak.estimatedRevenue.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-white mb-1">{leak.title}</h3>
+                  <p className="text-sm text-gray-400 mb-3">{leak.description}</p>
+                  <div className="bg-black/30 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">RECOMMENDED ACTION</p>
+                    <p className="text-sm text-blue-400">{leak.recommendedAction}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-t border-gray-800 px-6 py-4">
+        <div className="flex justify-center gap-6">
+          <button onClick={() => router.push('/dashboard/chat')}
+            className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <span className="text-xs">Chat</span>
           </button>
-          <p className="text-gray-500 text-sm mt-4">
-            ~30 SECONDS • NO DATA STORED
-          </p>
-
-          {/* Error Message */}
-          {auditError && (
-            <p className="text-pons-red text-sm mt-4">{auditError}</p>
-          )}
+          <button onClick={() => router.push('/dashboard/voice')}
+            className="flex flex-col items-center gap-1 px-8 py-3 bg-blue-600 rounded-full text-white hover:bg-blue-500 transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+            <span className="text-xs">Voice</span>
+          </button>
         </div>
-
-        {/* Value Prop */}
-        <div className="card p-4 mb-4">
-          <p className="text-gray-300 text-center">
-            PONS connects to your CRM to identify{' '}
-            <span className="text-white font-semibold">stalled deals</span>,{' '}
-            <span className="text-white font-semibold">missed follow-ups</span>, and{' '}
-            <span className="text-white font-semibold">revenue leaks</span> instantly.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show results
-  return (
-    <div className="flex-1 flex flex-col px-4">
-      {/* Results Header */}
-      <div className="flex items-center gap-3 py-4">
-        <h2 className="text-xl font-semibold">Revenue at Risk</h2>
-        <span className="badge-leaks">
-          {leakSummary?.total || leaks.length} Leaks Detected
-        </span>
-      </div>
-      <p className="text-gray-500 text-sm mb-4">
-        Sorted by highest ROI action immediately available.
-      </p>
-
-      {/* Leak Cards */}
-      <div className="space-y-3 flex-1 overflow-auto pb-4">
-        {leaks.map((leak, index) => (
-          <LeakCard key={leak.id} leak={leak} rank={index + 1} />
-        ))}
-      </div>
-
-      {/* New Audit Button */}
-      <button
-        onClick={() => {
-          setLeaks([])
-          setLeakSummary(null)
-          setHasRunAudit(false)
-        }}
-        className="text-gray-400 text-sm underline py-4 text-center"
-      >
-        Start New Audit
-      </button>
+      </nav>
     </div>
-  )
-}
-
-// Leak Card Component
-function LeakCard({ leak, rank }: { leak: any; rank: number }) {
-  const severityClass = {
-    CRITICAL: 'badge-critical',
-    HIGH: 'badge-high',
-    MEDIUM: 'badge-medium',
-    LOW: 'bg-gray-700 text-gray-300',
-  }[leak.severity] || 'bg-gray-700 text-gray-300'
-
-  return (
-    <div className="card card-critical p-4">
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500 text-sm">#{rank}</span>
-          <span className={`badge ${severityClass}`}>{leak.severity}</span>
-          {leak.tags?.includes('SLA_BREACH') && (
-            <span className="badge badge-sla">SLA BREACH</span>
-          )}
-        </div>
-        <div className="text-right">
-          <span className="text-gray-500 text-xs">RISK:</span>
-          <span className="text-white font-bold text-lg ml-1">
-            {formatCurrency(leak.revenueAtRisk)}
-          </span>
-        </div>
-      </div>
-      
-      <h3 className="text-white font-semibold mb-1">{leak.title}</h3>
-      <p className="text-gray-400 text-sm">{leak.description}</p>
-      
-      {/* Audio Button */}
-      <button className="absolute top-4 right-4 text-gray-500 hover:text-white">
-        <Volume2 size={18} />
-      </button>
-    </div>
-  )
+  );
 }
