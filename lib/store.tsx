@@ -34,16 +34,26 @@ interface CRMConfig {
   locationId?: string;
 }
 
+interface CRMData {
+  leads: any[];
+  contacts: any[];
+  opportunities: any[];
+  activities: any[];
+  reps: any[];
+}
+
 interface AppState {
   isConnected: boolean;
   crmType: string | null;
   crmConfig: CRMConfig | null;
+  crmData: CRMData | null;
   leaks: Leak[];
   repKPIs: RepKPI[];
   isVoiceActive: boolean;
   isManagerMode: boolean;
   isLoading: boolean;
   setConnected: (connected: boolean, crm?: string, config?: CRMConfig) => void;
+  setCrmData: (data: CRMData) => void;
   setLeaks: (leaks: Leak[]) => void;
   setRepKPIs: (kpis: RepKPI[]) => void;
   setVoiceActive: (active: boolean) => void;
@@ -61,6 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [crmType, setCrmType] = useState<string | null>(null);
   const [crmConfig, setCrmConfig] = useState<CRMConfig | null>(null);
+  const [crmData, setCrmDataState] = useState<CRMData | null>(null);
   const [leaks, setLeaksState] = useState<Leak[]>([]);
   const [repKPIs, setRepKPIsState] = useState<RepKPI[]>([]);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -71,6 +82,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsConnected(connected);
     if (crm) setCrmType(crm);
     if (config) setCrmConfig(config);
+  };
+
+  const setCrmData = (data: CRMData) => {
+    setCrmDataState(data);
   };
 
   const setLeaks = (newLeaks: Leak[]) => {
@@ -94,20 +109,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshLeaks = async () => {
-    if (!crmConfig) return;
+    if (!crmData) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/leaks`, {
+      const response = await fetch(`${API_URL}/leaks/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          crm: crmConfig.crm,
-          config: {
-            apiKey: crmConfig.apiKey,
-            accessToken: crmConfig.accessToken,
-            locationId: crmConfig.locationId,
-          },
+          leads: crmData.leads,
+          contacts: crmData.contacts,
+          opportunities: crmData.opportunities,
+          activities: crmData.activities,
+          reps: crmData.reps,
           includeAI: false
         })
       });
@@ -127,6 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsConnected(false);
     setCrmType(null);
     setCrmConfig(null);
+    setCrmDataState(null);
     setLeaksState([]);
     setRepKPIsState([]);
   };
@@ -136,12 +151,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isConnected,
       crmType,
       crmConfig,
+      crmData,
       leaks,
       repKPIs,
       isVoiceActive,
       isManagerMode,
       isLoading,
       setConnected,
+      setCrmData,
       setLeaks,
       setRepKPIs,
       setVoiceActive,

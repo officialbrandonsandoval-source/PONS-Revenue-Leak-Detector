@@ -2,47 +2,52 @@
 > **TRIGGER:** Say "revert to the status md" to resume from this exact point
 
 ## LAST ACTION
-Deployed frontend to Vercel, fixed TypeScript errors in dashboard layout
+Fixed CORS + axios dependency. Demo Mode working end-to-end.
 
 ## CURRENT BLOCKER
-None - need to verify current deployment state and continue building intelligence layer
+None
 
 ## NEXT STEP
-1. Run `npx vercel --prod` to check if build passes
-2. If passing, wire frontend to fetch real CRM data (not mock)
-3. Build lead scoring algorithm in pons-api
+Build intelligence layer:
+1. src/ai/leadScoring.js
+2. src/ai/dealPrioritization.js
+3. src/ai/actionRecommendations.js
+4. src/ai/insightEngine.js
 
-## FILES TOUCHED THIS SESSION
-- app/dashboard/layout.tsx (fixed AppState type errors)
-- app/dashboard/page.tsx
-- app/dashboard/chat/page.tsx
-- app/dashboard/voice/page.tsx
-- lib/store.tsx
+## VERIFIED WORKING ✅
+- Frontend deployed: https://www.pons.solutions
+- Backend deployed: https://pons-api.vercel.app
+- Demo Mode: connects and shows leaks
+- CORS: preflight returns 204
+- /leaks/analyze: returns leak data
+- Voice UI: browser speech working
+- Chat UI: simulated responses
+
+## NOT BUILT YET
+- Lead scoring algorithm
+- Deal prioritization ranking
+- Action recommendation engine
+- Real AI chat (currently simulated)
+- Real CRM data persistence after connect
 
 ## REPO LOCATIONS
 - Frontend: /Users/brandonsandoval/Desktop/PONS-Revenue-Leak-Detector
 - Backend: /Users/brandonsandoval/Desktop/pons-api
 
-## DEPLOYMENT URLS
-- Frontend: https://pons-revenue-leak-detector.vercel.app
-- Backend: https://pons-api.vercel.app
-
-## WHAT'S WORKING
-- Backend: leak detection (10 types), rep KPIs, HubSpot provider, Gemini AI
-- Frontend: connect page, dashboard UI, voice UI (browser speech), chat UI (simulated)
-
-## WHAT'S NOT BUILT
-- src/ai/leadScoring.js
-- src/ai/dealPrioritization.js
-- src/ai/insightEngine.js
-- src/ai/actionRecommendations.js
-- Real CRM data fetch after connect (frontend uses mock on refresh)
-
-## COMMANDS TO RESUME
+## QUICK COMMANDS
 ```bash
-cd ~/Desktop/PONS-Revenue-Leak-Detector && npm run build
+# Frontend
+cd ~/Desktop/PONS-Revenue-Leak-Detector && npm run dev
+
+# Backend
 cd ~/Desktop/pons-api && npm run dev
+
+# Deploy frontend
+cd ~/Desktop/PONS-Revenue-Leak-Detector && npx vercel --prod
+
+# Deploy backend
+cd ~/Desktop/pons-api && npx vercel --prod
 ```
 
 ---
-**Updated:** 2026-01-02
+**Updated:** 2026-01-02 11:02 AM PST

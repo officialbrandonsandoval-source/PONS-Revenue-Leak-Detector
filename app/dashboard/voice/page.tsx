@@ -4,8 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { ArrowLeft, Mic, MicOff, Volume2 } from 'lucide-react';
+import { getVoiceSummary, runQuickAnalysis } from '@/lib/api';
 
-// Type definitions for Web Speech API
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList;
   resultIndex: number;
@@ -38,22 +38,21 @@ declare global {
 
 export default function VoicePage() {
   const router = useRouter();
-  const { isManagerMode, setVoiceActive, leaks } = useApp();
+  const { isManagerMode, setVoiceActive, leaks, crmData } = useApp();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
   const [error, setError] = useState('');
   const [isSupported, setIsSupported] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
 
   const criticalCount = leaks.filter(l => l.severity === 'CRITICAL').length;
-  const highCount = leaks.filter(l => l.severity === 'HIGH').length;
   const totalRisk = leaks.reduce((sum, l) => sum + l.estimatedRevenue, 0);
 
-  // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -88,84 +87,144 @@ export default function VoicePage() {
         };
       } else {
         setIsSupported(false);
-        setError('Voice recognition not supported in this browser. Use Chrome or Safari.');
+        setError('Voice not supported. Use Chrome or Safari.');
       }
 
-      // Initialize speech synthesis
       synthRef.current = window.speechSynthesis;
     }
 
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-      if (synthRef.current) {
-        synthRef.current.cancel();
-      }
+      if (recognitionRef.current) recognitionRef.current.abort();
+      if (synthRef.current) synthRef.current.cancel();
     };
   }, [setVoiceActive]);
 
-  // Process voice commands
-  const processCommand = useCallback((command: string) => {
+  const processCommand = useCallback(async (command: string) => {
     const cmd = command.toLowerCase();
+    setIsProcessing(true);
     let responseText = '';
 
-    // Critical leaks query
-    if (cmd.includes('critical') || cmd.includes('urgent') || cmd.includes('important')) {
-      if (criticalCount > 0) {
-        const criticalLeaks = leaks.filter(l => l.severity === 'CRITICAL');
-        const topLeak = criticalLeaks[0];
-        responseText = `You have ${criticalCount} critical leak${criticalCount > 1 ? 's' : ''}. `;
-        responseText += `The top priority is ${topLeak.type.replace(/_/g, ' ')} `;
-        responseText += `with ${topLeak.impactedCount} deals at risk, worth $${(topLeak.estimatedRevenue / 1000).toFixed(0)}k.`;
-      } else {
-        responseText = 'Great news! You have no critical leaks right now.';
+    try {
+      // Use intelligence API for summary/overview commands
+      if (cmd.includes('summary') || cmd.includes('overview') || cmd.includes('status') || cmd.includes('pipeline') || cmd.includes('briefing')) {
+        if (crmData) {
+          const voiceData = await getVoiceSummary({
+            leads: crmData.leads,
+            opportunities: crmData.opportunities,
+            activities: crmData.activities
+          });
+          responseText = voiceData.text;
+        } else {
+          responseText = `You have ${leaks.length} revenue leaks totaling $${(totalRisk / 1000).toFixed(0)}k at risk.`;
+        }
       }
-    }
-    // Total risk query
-    else if (cmd.includes('risk') || cmd.includes('money') || cmd.includes('revenue') || cmd.includes('total')) {
-      responseText = `Total revenue at risk is $${(totalRisk / 1000).toFixed(0)}k across ${leaks.length} identified leaks. `;
-      if (criticalCount > 0) {
-        responseText += `${criticalCount} are critical priority.`;
+      // Next action query
+      else if (cmd.includes('do') || cmd.includes('action') || cmd.includes('next') || cmd.includes('should') || cmd.includes('priority')) {
+        if (crmData) {
+          const analysis = await runQuickAnalysis({
+            leads: crmData.leads,
+            opportunities: crmData.opportunities,
+            activities: crmData.activities
+          });
+          if (analysis.nextAction) {
+            responseText = `Priority action: ${analysis.nextAction.title}. ${analysis.nextAction.description}`;
+          } else {
+            responseText = 'Your pipeline is healthy. Focus on closing your top opportunities.';
+          }
+        } else if (criticalCount > 0) {
+          const topLeak = leaks.filter(l => l.severity === 'CRITICAL')[0];
+          responseText = `Priority action: Address ${topLeak.type.replace(/_/g, ' ')}. ${topLeak.recommendedAction}`;
+        } else {
+          responseText = 'Your pipeline looks healthy. Focus on closing your top opportunities.';
+        }
       }
-    }
-    // What should I do / next action
-    else if (cmd.includes('do') || cmd.includes('action') || cmd.includes('next') || cmd.includes('should')) {
-      if (criticalCount > 0) {
-        const topLeak = leaks.filter(l => l.severity === 'CRITICAL')[0];
-        responseText = `Priority action: Address ${topLeak.type.replace(/_/g, ' ')}. `;
-        responseText += `${topLeak.recommendedAction}`;
-      } else if (highCount > 0) {
-        const topLeak = leaks.filter(l => l.severity === 'HIGH')[0];
-        responseText = `Focus on ${topLeak.type.replace(/_/g, ' ')}. ${topLeak.recommendedAction}`;
-      } else {
-        responseText = 'Your pipeline looks healthy. Focus on closing your top opportunities.';
+      // Critical leaks query
+      else if (cmd.includes('critical') || cmd.includes('urgent') || cmd.includes('important')) {
+        if (criticalCount > 0) {
+          const criticalLeaks = leaks.filter(l => l.severity === 'CRITICAL');
+          const topLeak = criticalLeaks[0];
+          responseText = `You have ${criticalCount} critical leak${criticalCount > 1 ? 's' : ''}. `;
+          responseText += `Top priority: ${topLeak.title}. ${topLeak.recommendedAction}`;
+        } else {
+          responseText = 'Great news! No critical leaks detected.';
+        }
       }
-    }
-    // Summary / overview
-    else if (cmd.includes('summary') || cmd.includes('overview') || cmd.includes('status') || cmd.includes('pipeline')) {
-      responseText = `Pipeline status: ${leaks.length} revenue leaks detected totaling $${(totalRisk / 1000).toFixed(0)}k at risk. `;
-      responseText += `${criticalCount} critical, ${highCount} high priority. `;
-      if (criticalCount > 0) {
-        responseText += `Immediate attention required.`;
-      } else {
-        responseText += `No immediate emergencies.`;
+      // Risk/revenue query
+      else if (cmd.includes('risk') || cmd.includes('money') || cmd.includes('revenue') || cmd.includes('total') || cmd.includes('how much')) {
+        if (crmData) {
+          const analysis = await runQuickAnalysis({
+            leads: crmData.leads,
+            opportunities: crmData.opportunities,
+            activities: crmData.activities
+          });
+          responseText = `Your pipeline has $${(analysis.pipelineValue / 1000).toFixed(0)}k in active opportunities. `;
+          responseText += `$${(totalRisk / 1000).toFixed(0)}k is at risk across ${leaks.length} leaks.`;
+        } else {
+          responseText = `Total revenue at risk: $${(totalRisk / 1000).toFixed(0)}k across ${leaks.length} leaks.`;
+        }
       }
-    }
-    // Help
-    else if (cmd.includes('help') || cmd.includes('what can')) {
-      responseText = `You can ask me about critical leaks, total revenue at risk, what action to take next, or get a pipeline summary.`;
-    }
-    // Default response
-    else {
-      responseText = `I detected ${leaks.length} leaks worth $${(totalRisk / 1000).toFixed(0)}k. Ask about critical leaks, revenue at risk, or what to do next.`;
+      // Leads query
+      else if (cmd.includes('lead') || cmd.includes('hot') || cmd.includes('prospect')) {
+        if (crmData) {
+          const analysis = await runQuickAnalysis({
+            leads: crmData.leads,
+            opportunities: crmData.opportunities,
+            activities: crmData.activities
+          });
+          if (analysis.hotLeads > 0) {
+            responseText = `You have ${analysis.hotLeads} hot lead${analysis.hotLeads > 1 ? 's' : ''} ready for immediate outreach.`;
+          } else {
+            responseText = 'No hot leads right now. Focus on nurturing your warm leads.';
+          }
+        } else {
+          responseText = 'Connect your CRM to see lead scoring.';
+        }
+      }
+      // Deals query
+      else if (cmd.includes('deal') || cmd.includes('opportunity') || cmd.includes('close')) {
+        if (crmData) {
+          const analysis = await runQuickAnalysis({
+            leads: crmData.leads,
+            opportunities: crmData.opportunities,
+            activities: crmData.activities
+          });
+          if (analysis.topDeal) {
+            responseText = `Your top deal is ${analysis.topDeal.dealName} worth $${(analysis.topDeal.value / 1000).toFixed(0)}k. `;
+            responseText += `${analysis.topDeal.recommendation?.message || 'Keep pushing forward.'}`;
+          } else {
+            responseText = 'No active deals found.';
+          }
+        } else {
+          responseText = 'Connect your CRM to see deal priorities.';
+        }
+      }
+      // Help
+      else if (cmd.includes('help') || cmd.includes('what can')) {
+        responseText = 'Ask me for a pipeline summary, critical leaks, next action, hot leads, or top deals.';
+      }
+      // Default - give summary
+      else {
+        if (crmData) {
+          const voiceData = await getVoiceSummary({
+            leads: crmData.leads,
+            opportunities: crmData.opportunities,
+            activities: crmData.activities
+          });
+          responseText = voiceData.text;
+        } else {
+          responseText = `I found ${leaks.length} leaks worth $${(totalRisk / 1000).toFixed(0)}k. Ask about critical leaks, next action, or pipeline summary.`;
+        }
+      }
+    } catch (err) {
+      console.error('Voice processing error:', err);
+      responseText = `I found ${leaks.length} leaks worth $${(totalRisk / 1000).toFixed(0)}k at risk.`;
     }
 
+    setIsProcessing(false);
     setResponse(responseText);
     speak(responseText);
-  }, [leaks, criticalCount, highCount, totalRisk]);
+  }, [leaks, crmData, criticalCount, totalRisk]);
 
-  // Text-to-speech
   const speak = (text: string) => {
     if (synthRef.current) {
       synthRef.current.cancel();
@@ -173,18 +232,15 @@ export default function VoicePage() {
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
-      
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
-      
       synthRef.current.speak(utterance);
     }
   };
 
   const toggleListening = () => {
     setError('');
-    
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -194,16 +250,14 @@ export default function VoicePage() {
         setError('Voice not supported. Use Chrome or Safari.');
         return;
       }
-      
       setTranscript('');
       setResponse('');
-      
       try {
         recognitionRef.current?.start();
         setIsListening(true);
         setVoiceActive(true);
       } catch (err) {
-        setError('Could not start voice recognition. Check microphone permissions.');
+        setError('Check microphone permissions.');
         console.error(err);
       }
     }
@@ -218,7 +272,6 @@ export default function VoicePage() {
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
-      {/* Header */}
       <header className="px-4 py-3 flex items-center justify-between">
         <button onClick={() => router.push('/dashboard')} className="p-2 -ml-2">
           <ArrowLeft className="w-5 h-5 text-gray-400" />
@@ -230,25 +283,23 @@ export default function VoicePage() {
             </button>
           )}
           {isManagerMode && (
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-500 text-xs rounded-full">
-              Manager Mode
-            </span>
+            <span className="px-3 py-1 bg-amber-500/20 text-amber-500 text-xs rounded-full">Manager</span>
           )}
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6">
-        {/* Voice Orb */}
         <div className="relative mb-8">
           <button
             onClick={toggleListening}
-            disabled={!isSupported}
+            disabled={!isSupported || isProcessing}
             className={`w-48 h-48 rounded-full flex items-center justify-center transition-all duration-500 ${
               isListening 
                 ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-[0_0_60px_rgba(59,130,246,0.5)]' 
                 : isSpeaking
                 ? 'bg-gradient-to-br from-green-500 to-green-700 shadow-[0_0_60px_rgba(34,197,94,0.5)]'
+                : isProcessing
+                ? 'bg-gradient-to-br from-purple-500 to-purple-700 shadow-[0_0_60px_rgba(168,85,247,0.5)]'
                 : 'bg-gradient-to-br from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800'
             }`}
           >
@@ -257,6 +308,8 @@ export default function VoicePage() {
                 ? 'bg-gradient-to-br from-amber-400 to-amber-600 animate-pulse' 
                 : isSpeaking
                 ? 'bg-gradient-to-br from-green-400 to-green-600 animate-pulse'
+                : isProcessing
+                ? 'bg-gradient-to-br from-purple-400 to-purple-600 animate-pulse'
                 : 'bg-gradient-to-br from-gray-600 to-gray-800'
             }`}>
               {isListening ? (
@@ -268,78 +321,55 @@ export default function VoicePage() {
               )}
             </div>
           </button>
-          
-          {isListening && (
-            <div className="absolute inset-0 rounded-full animate-ping bg-blue-500/20" />
-          )}
+          {isListening && <div className="absolute inset-0 rounded-full animate-ping bg-blue-500/20" />}
         </div>
 
-        {/* Status Text */}
         <h2 className="text-xl font-semibold text-white mb-2">
-          {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Tap to Speak'}
+          {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : isProcessing ? 'Analyzing...' : 'Tap to Speak'}
         </h2>
         <p className="text-gray-400 text-center mb-4">
-          {isListening 
-            ? 'Ask about your pipeline, leaks, or what to do next'
-            : `${criticalCount} critical leaks • $${(totalRisk/1000).toFixed(0)}k at risk`
-          }
+          {isListening ? 'Ask about pipeline, leaks, or next action' : `${criticalCount} critical • $${(totalRisk/1000).toFixed(0)}k at risk`}
         </p>
 
-        {/* Error */}
         {error && (
           <div className="w-full max-w-sm bg-red-900/30 border border-red-500/50 rounded-xl p-4 mb-4">
             <p className="text-red-400 text-sm text-center">{error}</p>
           </div>
         )}
 
-        {/* Transcript */}
         {transcript && (
           <div className="w-full max-w-sm bg-gray-900/50 rounded-xl p-4 mb-4">
-            <p className="text-sm text-gray-400 mb-1">You said:</p>
+            <p className="text-sm text-gray-400 mb-1">You:</p>
             <p className="text-white">{transcript}</p>
           </div>
         )}
 
-        {/* Response */}
         {response && (
-          <div className="w-full max-w-sm bg-blue-900/30 border border-blue-500/30 rounded-xl p-4 mb-8">
-            <p className="text-sm text-blue-400 mb-1">PONS:</p>
+          <div className="w-full max-w-sm bg-purple-900/30 border border-purple-500/30 rounded-xl p-4 mb-8">
+            <p className="text-sm text-purple-400 mb-1">PONS:</p>
             <p className="text-white">{response}</p>
           </div>
         )}
 
-        {/* Suggestions */}
         <div className="w-full max-w-sm space-y-2 mb-8">
-          <p className="text-xs text-gray-500 text-center mb-2">Try saying:</p>
+          <p className="text-xs text-gray-500 text-center mb-2">Try:</p>
           <div className="flex flex-wrap gap-2 justify-center">
-            {['What are my critical leaks?', 'Total revenue at risk', 'What should I do next?'].map((suggestion) => (
-              <button
-                key={suggestion}
-                onClick={() => {
-                  setTranscript(suggestion);
-                  processCommand(suggestion);
-                }}
-                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-xs text-gray-300 transition-colors"
-              >
-                {suggestion}
+            {['Pipeline summary', 'Next action', 'Hot leads', 'Top deal'].map((s) => (
+              <button key={s} onClick={() => { setTranscript(s); processCommand(s); }}
+                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-xs text-gray-300 transition-colors">
+                {s}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={toggleListening}
-          disabled={!isSupported}
+        <button onClick={toggleListening} disabled={!isSupported || isProcessing}
           className={`w-full max-w-sm py-4 rounded-xl font-semibold transition-all ${
-            !isSupported
-              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-              : isListening
-              ? 'bg-red-600 hover:bg-red-500 text-white'
-              : 'bg-blue-600 hover:bg-blue-500 text-white'
-          }`}
-        >
-          {!isSupported ? 'Voice Not Supported' : isListening ? 'Stop Listening' : 'Start Voice Mode'}
+            !isSupported ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              : isListening ? 'bg-red-600 hover:bg-red-500 text-white'
+              : 'bg-purple-600 hover:bg-purple-500 text-white'
+          }`}>
+          {!isSupported ? 'Not Supported' : isListening ? 'Stop' : 'Start Voice'}
         </button>
       </div>
     </div>

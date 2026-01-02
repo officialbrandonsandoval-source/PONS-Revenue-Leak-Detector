@@ -8,6 +8,39 @@ import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://pons-api.vercel.app';
 
+// Demo data
+const DEMO_DATA = {
+  opportunities: [
+    { id: '1', name: 'Acme Corp Deal', value: 45000, stage: 'proposal', status: 'open', contactId: 'c1', createdAt: '2025-09-01', updatedAt: '2025-09-15', assignedTo: 'rep1' },
+    { id: '2', name: 'TechStart Contract', value: 125000, stage: 'negotiation', status: 'open', contactId: 'c2', createdAt: '2025-10-01', updatedAt: '2025-10-20', assignedTo: 'rep1' },
+    { id: '3', name: 'GlobalCo Partnership', value: 85000, stage: 'discovery', status: 'open', contactId: 'c3', createdAt: '2025-11-01', updatedAt: '2025-11-10', assignedTo: 'rep2' },
+    { id: '4', name: 'Lost Opportunity', value: 35000, status: 'lost', lostReason: '', contactId: 'c4', createdAt: '2025-10-15', updatedAt: '2025-12-01' },
+    { id: '5', name: 'MegaCorp Enterprise', value: 250000, stage: 'proposal', status: 'open', contactId: 'c5', createdAt: '2025-08-15', updatedAt: '2025-09-01', assignedTo: 'rep1' },
+  ],
+  activities: [
+    { id: 'a1', contactId: 'c1', type: 'call', performedBy: 'rep1', createdAt: '2025-09-15', outcome: 'completed' },
+    { id: 'a2', contactId: 'c2', type: 'email', performedBy: 'rep1', createdAt: '2025-10-20', outcome: 'completed' },
+    { id: 'a3', contactId: 'c2', type: 'call', performedBy: 'rep1', createdAt: '2025-12-28', outcome: 'responded', direction: 'inbound' },
+  ],
+  leads: [
+    { id: 'l1', firstName: 'New', lastName: 'Prospect', email: 'new@prospect.com', phone: '555-0101', status: 'new', createdAt: '2025-12-30', leadSource: 'referral', title: 'VP Sales' },
+    { id: 'l2', firstName: 'Warm', lastName: 'Lead', email: 'warm@lead.com', status: 'new', createdAt: '2025-12-25', leadSource: 'demo_request', company: 'BigCo', title: 'Director' },
+    { id: 'l3', firstName: 'Cold', lastName: 'Contact', email: 'cold@contact.com', status: 'new', createdAt: '2025-11-15', leadSource: 'trade_show' },
+    { id: 'l4', firstName: 'Hot', lastName: 'Buyer', email: 'hot@buyer.com', phone: '555-0199', status: 'new', createdAt: '2026-01-01', leadSource: 'referral', company: 'Enterprise Inc', title: 'CEO' },
+  ],
+  contacts: [
+    { id: 'c1', name: 'John Smith', firstName: 'John', lastName: 'Smith', email: 'john@acme.com' },
+    { id: 'c2', name: 'Sarah Johnson', firstName: 'Sarah', lastName: 'Johnson', email: 'sarah@techstart.com' },
+    { id: 'c3', name: 'Mike Williams', firstName: 'Mike', lastName: 'Williams', email: 'mike@globalco.com' },
+    { id: 'c4', name: 'Lisa Brown', firstName: 'Lisa', lastName: 'Brown', email: '' },
+    { id: 'c5', name: 'David Chen', firstName: 'David', lastName: 'Chen', email: 'david@megacorp.com' },
+  ],
+  reps: [
+    { id: 'rep1', name: 'Alex Turner', active: true },
+    { id: 'rep2', name: 'Jordan Lee', active: true },
+  ]
+};
+
 const CRM_OPTIONS = [
   { id: 'hubspot', name: 'HUBSPOT', icon: Database, placeholder: 'Enter HubSpot Access Token...' },
   { id: 'ghl', name: 'GOHIGHLEVEL', icon: Zap, placeholder: 'Enter GHL API Key...', needsLocation: true },
@@ -19,7 +52,7 @@ const CRM_OPTIONS = [
 
 export default function ConnectPage() {
   const router = useRouter();
-  const { setConnected, setLeaks, setLoading } = useApp();
+  const { setConnected, setCrmData, setLeaks, setLoading } = useApp();
   const [selectedCRM, setSelectedCRM] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [locationId, setLocationId] = useState('');
@@ -35,45 +68,19 @@ export default function ConnectPage() {
 
     try {
       if (selectedCRM === 'demo') {
-        // Demo mode - use webhook with sample data
+        // Demo mode - use sample data
         const response = await fetch(`${API_URL}/leaks/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            opportunities: [
-              { id: '1', name: 'Acme Corp Deal', value: 45000, stage: 'proposal', status: 'open', contactId: 'c1', createdAt: '2025-09-01', updatedAt: '2025-09-15', assignedTo: 'rep1' },
-              { id: '2', name: 'TechStart Contract', value: 125000, stage: 'negotiation', status: 'open', contactId: 'c2', createdAt: '2025-10-01', updatedAt: '2025-10-20', assignedTo: 'rep1' },
-              { id: '3', name: 'GlobalCo Partnership', value: 85000, stage: 'discovery', status: 'open', contactId: 'c3', createdAt: '2025-11-01', updatedAt: '2025-11-10', assignedTo: 'rep2' },
-              { id: '4', name: 'Lost Opportunity', value: 35000, status: 'lost', lostReason: '', contactId: 'c4', createdAt: '2025-10-15', updatedAt: '2025-12-01' },
-              { id: '5', name: 'MegaCorp Enterprise', value: 250000, stage: 'proposal', status: 'open', contactId: 'c5', createdAt: '2025-08-15', updatedAt: '2025-09-01', assignedTo: 'rep1' },
-            ],
-            activities: [
-              { id: 'a1', contactId: 'c1', type: 'call', performedBy: 'rep1', createdAt: '2025-09-15', outcome: 'completed' },
-              { id: 'a2', contactId: 'c2', type: 'email', performedBy: 'rep1', createdAt: '2025-10-20', outcome: 'completed' },
-            ],
-            leads: [
-              { id: 'l1', firstName: 'New', lastName: 'Prospect', status: 'new', createdAt: '2025-12-20', leadSource: 'Website' },
-              { id: 'l2', firstName: 'Warm', lastName: 'Lead', status: 'new', createdAt: '2025-12-01', leadSource: 'Referral' },
-              { id: 'l3', firstName: 'Cold', lastName: 'Contact', status: 'new', createdAt: '2025-11-15', leadSource: 'Trade Show' },
-            ],
-            contacts: [
-              { id: 'c1', name: 'John Smith', email: 'john@acme.com' },
-              { id: 'c2', name: 'Sarah Johnson', email: 'sarah@techstart.com' },
-              { id: 'c3', name: 'Mike Williams', email: 'mike@globalco.com' },
-              { id: 'c4', name: 'Lisa Brown', email: '' },
-              { id: 'c5', name: 'David Chen', email: 'david@megacorp.com' },
-            ],
-            reps: [
-              { id: 'rep1', name: 'Alex Turner', active: true },
-              { id: 'rep2', name: 'Jordan Lee', active: true },
-            ],
-            includeAI: false
-          })
+          body: JSON.stringify({ ...DEMO_DATA, includeAI: false })
         });
 
         if (!response.ok) throw new Error('Failed to load demo data');
 
         const data = await response.json();
+        
+        // Store CRM data for analysis
+        setCrmData(DEMO_DATA);
         setLeaks(data.leaks || []);
         setConnected(true, 'demo', { crm: 'webhook' });
         router.push('/dashboard');
@@ -113,6 +120,12 @@ export default function ConnectPage() {
       });
 
       const leaksData = await leaksResponse.json();
+      
+      // Store data (from CRM response if available)
+      if (connectData.data) {
+        setCrmData(connectData.data);
+      }
+      
       setLeaks(leaksData.leaks || []);
       setConnected(true, selectedCRM, crmConfig);
       router.push('/dashboard');
