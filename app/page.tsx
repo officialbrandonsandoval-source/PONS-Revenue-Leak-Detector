@@ -7,17 +7,19 @@ import { Cloud, Database, BarChart3, FileSpreadsheet, Zap, Play } from 'lucide-r
 import Image from 'next/image';
 
 const CRM_OPTIONS = [
+  { id: 'hubspot', name: 'HUBSPOT', icon: Database, placeholder: 'Enter HubSpot Private App Token...' },
   { id: 'salesforce', name: 'SALESFORCE', icon: Cloud, placeholder: 'Enter Salesforce API key...' },
-  { id: 'hubspot', name: 'HUBSPOT', icon: Database, placeholder: 'Enter HubSpot API key...' },
   { id: 'pipedrive', name: 'PIPEDRIVE', icon: BarChart3, placeholder: 'Enter Pipedrive API key...' },
   { id: 'zoho', name: 'ZOHO CRM', icon: FileSpreadsheet, placeholder: 'Enter Zoho API key...' },
-  { id: 'gohighlevel', name: 'GOHIGHLEVEL', icon: Zap, placeholder: 'ghl_...' },
-  { id: 'demo', name: 'DEMO DATA', icon: Play, placeholder: '' },
+  { id: 'ghl', name: 'GOHIGHLEVEL', icon: Zap, placeholder: 'Enter GHL API key...' },
+  { id: 'demo', name: 'DEMO MODE', icon: Play, placeholder: '' },
 ];
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://pons-api.vercel.app';
 
 export default function ConnectPage() {
   const router = useRouter();
-  const { setConnected, setLeaks } = useApp();
+  const { setConnected, setLeaks, setRepKPIs } = useApp();
   const [selectedCRM, setSelectedCRM] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,8 +32,14 @@ export default function ConnectPage() {
     setError('');
 
     try {
+      const config = selectedCRM === 'demo' ? {} : { 
+        apiKey,
+        accessToken: apiKey // HubSpot uses accessToken
+      };
+
       if (selectedCRM === 'demo') {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pons-api.vercel.app'}/leaks/analyze`, {
+        // Demo mode - load with inline data
+        const response = await fetch(`${API_URL}/leaks/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -67,36 +75,60 @@ export default function ConnectPage() {
         });
 
         if (!response.ok) throw new Error('Failed to load demo data');
-
         const data = await response.json();
+        
         setLeaks(data.leaks || []);
-        setConnected(true, 'demo');
+        setConnected(true, 'demo', {});
         router.push('/dashboard');
       } else {
+        // Real CRM connection
         if (!apiKey) {
           setError('API key is required');
           setLoading(false);
           return;
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pons-api.vercel.app'}/connect`, {
+        // Test connection first
+        const connectResponse = await fetch(`${API_URL}/connect`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ crm: selectedCRM, config: { apiKey } })
+          body: JSON.stringify({ crm: selectedCRM, config })
         });
 
-        const data = await response.json();
-        if (!response.ok || !data.connected) throw new Error(data.error || 'Connection failed');
+        const connectData = await connectResponse.json();
+        if (!connectResponse.ok || !connectData.connected) {
+          throw new Error(connectData.error || 'Connection failed');
+        }
 
-        const leaksResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://pons-api.vercel.app'}/leaks`, {
+        // Fetch initial leaks
+        const leaksResponse = await fetch(`${API_URL}/leaks`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ crm: selectedCRM, config: { apiKey }, includeAI: false })
+          body: JSON.stringify({ crm: selectedCRM, config, includeAI: false })
         });
+
+        if (!leaksResponse.ok) {
+          const err = await leaksResponse.json();
+          throw new Error(err.error || 'Failed to analyze CRM data');
+        }
 
         const leaksData = await leaksResponse.json();
         setLeaks(leaksData.leaks || []);
-        setConnected(true, selectedCRM);
+
+        // Fetch rep KPIs
+        const kpiResponse = await fetch(`${API_URL}/reps/kpis`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ crm: selectedCRM, config })
+        });
+
+        if (kpiResponse.ok) {
+          const kpiData = await kpiResponse.json();
+          setRepKPIs(kpiData.kpis || []);
+        }
+
+        // Store connection with config
+        setConnected(true, selectedCRM, config);
         router.push('/dashboard');
       }
     } catch (err) {
@@ -125,7 +157,7 @@ export default function ConnectPage() {
       
       <h2 className="text-xl font-medium text-white mb-2">Connect Your CRM</h2>
       <p className="text-gray-400 text-center mb-8 max-w-md text-sm">
-        PONS requires read-only access to detect revenue leaks in your pipeline.
+        PONS analyzes your pipeline in real-time to detect revenue leaks.
       </p>
 
       <div className="grid grid-cols-2 gap-3 w-full max-w-md mb-6">
@@ -159,18 +191,18 @@ export default function ConnectPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            SECURE TLS 1.3 CONNECTION
+            READ-ONLY • NO DATA STORED
           </div>
 
           {isDemo ? (
             <>
               <p className="text-gray-400 text-sm mb-4">
-                Load sample CRM data to explore PONS features. Includes realistic opportunities, leads, and activities.
+                Explore PONS with realistic sample data. See how leak detection works before connecting your real CRM.
               </p>
               <button onClick={handleConnect} disabled={loading}
                 className="w-full py-4 bg-gradient-to-r from-purple-600 to-amber-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
                 {loading ? (
-                  <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Loading Demo...</>
+                  <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Loading...</>
                 ) : (
                   <><Play className="w-5 h-5" /> Launch Demo</>
                 )}
@@ -191,7 +223,7 @@ export default function ConnectPage() {
                 {loading ? (
                   <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Connecting...</>
                 ) : (
-                  <>Connect & Analyze <span>→</span></>
+                  <>Connect & Analyze →</>
                 )}
               </button>
             </>
@@ -199,12 +231,12 @@ export default function ConnectPage() {
 
           {error && <p className="text-red-500 text-sm mt-4 text-center">{error}</p>}
           <p className="text-gray-500 text-xs text-center mt-4">
-            By connecting, you agree to PONS processing your data in memory. No data is stored.
+            Your credentials are used in-memory only. Never stored.
           </p>
         </div>
       )}
 
-      <p className="text-gray-600 text-xs mt-8">Revenue Intelligence Platform</p>
+      <p className="text-gray-600 text-xs mt-8">PONS Revenue Intelligence</p>
     </div>
   );
 }
