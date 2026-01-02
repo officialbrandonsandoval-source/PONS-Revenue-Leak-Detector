@@ -117,7 +117,7 @@ export default function VoicePage() {
         const topLeak = criticalLeaks[0];
         responseText = `You have ${criticalCount} critical leak${criticalCount > 1 ? 's' : ''}. `;
         responseText += `The top priority is ${topLeak.type.replace(/_/g, ' ')} `;
-        responseText += `with ${topLeak.affectedDeals} deals at risk, worth $${(topLeak.estimatedRevenue / 1000).toFixed(0)}k.`;
+        responseText += `with ${topLeak.impactedCount} deals at risk, worth $${(topLeak.estimatedRevenue / 1000).toFixed(0)}k.`;
       } else {
         responseText = 'Great news! You have no critical leaks right now.';
       }
