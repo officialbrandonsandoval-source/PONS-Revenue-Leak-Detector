@@ -134,10 +134,10 @@ export default function VoicePage() {
       if (criticalCount > 0) {
         const topLeak = leaks.filter(l => l.severity === 'CRITICAL')[0];
         responseText = `Priority action: Address ${topLeak.type.replace(/_/g, ' ')}. `;
-        responseText += `${topLeak.recommendation}`;
+        responseText += `${topLeak.recommendedAction}`;
       } else if (highCount > 0) {
         const topLeak = leaks.filter(l => l.severity === 'HIGH')[0];
-        responseText = `Focus on ${topLeak.type.replace(/_/g, ' ')}. ${topLeak.recommendation}`;
+        responseText = `Focus on ${topLeak.type.replace(/_/g, ' ')}. ${topLeak.recommendedAction}`;
       } else {
         responseText = 'Your pipeline looks healthy. Focus on closing your top opportunities.';
       }
