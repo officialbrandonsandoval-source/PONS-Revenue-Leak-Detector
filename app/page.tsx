@@ -4,14 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/store';
 import { Cloud, Database, BarChart3, FileSpreadsheet, Zap, Play } from 'lucide-react';
+import Image from 'next/image';
 
 const CRM_OPTIONS = [
-  { id: 'salesforce', name: 'SALESFORCE', icon: Cloud },
-  { id: 'hubspot', name: 'HUBSPOT', icon: Database },
-  { id: 'pipedrive', name: 'PIPEDRIVE', icon: BarChart3 },
-  { id: 'zoho', name: 'ZOHO CRM', icon: FileSpreadsheet },
-  { id: 'gohighlevel', name: 'GOHIGHLEVEL', icon: Zap },
-  { id: 'demo', name: 'DEMO DATA', icon: Play },
+  { id: 'salesforce', name: 'SALESFORCE', icon: Cloud, placeholder: 'Enter Salesforce API key...' },
+  { id: 'hubspot', name: 'HUBSPOT', icon: Database, placeholder: 'Enter HubSpot API key...' },
+  { id: 'pipedrive', name: 'PIPEDRIVE', icon: BarChart3, placeholder: 'Enter Pipedrive API key...' },
+  { id: 'zoho', name: 'ZOHO CRM', icon: FileSpreadsheet, placeholder: 'Enter Zoho API key...' },
+  { id: 'gohighlevel', name: 'GOHIGHLEVEL', icon: Zap, placeholder: 'ghl_...' },
+  { id: 'demo', name: 'DEMO DATA', icon: Play, placeholder: '' },
 ];
 
 export default function ConnectPage() {
@@ -109,31 +110,42 @@ export default function ConnectPage() {
   const isDemo = selectedCRM === 'demo';
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
-      <h1 className="text-4xl font-bold text-blue-500 tracking-[0.3em] mb-4">PONS</h1>
-      <h2 className="text-2xl font-semibold text-white mb-2">Connect Data Source</h2>
-      <p className="text-gray-400 text-center mb-8 max-w-md">
-        PONS requires read-only access to your CRM to detect revenue leaks.
+    <div className="min-h-screen bg-[#0f0a1a] flex flex-col items-center justify-center p-6">
+      {/* Logo */}
+      <div className="mb-8">
+        <Image 
+          src="/logo.svg" 
+          alt="PONS" 
+          width={200} 
+          height={200}
+          className="drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]"
+          priority
+        />
+      </div>
+      
+      <h2 className="text-xl font-medium text-white mb-2">Connect Your CRM</h2>
+      <p className="text-gray-400 text-center mb-8 max-w-md text-sm">
+        PONS requires read-only access to detect revenue leaks in your pipeline.
       </p>
 
-      <div className="grid grid-cols-2 gap-4 w-full max-w-md mb-6">
+      <div className="grid grid-cols-2 gap-3 w-full max-w-md mb-6">
         {CRM_OPTIONS.map((crm) => {
           const Icon = crm.icon;
           const isSelected = selectedCRM === crm.id;
-          const isDisabled = !['gohighlevel', 'demo'].includes(crm.id);
           
           return (
             <button
               key={crm.id}
-              onClick={() => !isDisabled && setSelectedCRM(crm.id)}
-              disabled={isDisabled}
+              onClick={() => setSelectedCRM(crm.id)}
               className={`
-                p-6 rounded-xl border transition-all flex flex-col items-center gap-3
-                ${isSelected ? 'border-blue-500 bg-blue-500/10' : isDisabled ? 'border-gray-800 bg-gray-900/30 opacity-50 cursor-not-allowed' : 'border-gray-800 bg-gray-900/50 hover:border-gray-700'}
-                ${crm.id === 'demo' ? 'col-span-2' : ''}
+                p-5 rounded-xl border transition-all flex flex-col items-center gap-2
+                ${isSelected 
+                  ? 'border-purple-500 bg-purple-500/10' 
+                  : 'border-gray-800 bg-gray-900/50 hover:border-purple-500/50 hover:bg-purple-500/5'}
+                ${crm.id === 'demo' ? 'col-span-2 bg-gradient-to-r from-purple-900/20 to-amber-900/20 border-purple-500/30' : ''}
               `}
             >
-              <Icon className={`w-8 h-8 ${isSelected ? 'text-blue-500' : crm.id === 'demo' ? 'text-amber-500' : 'text-gray-500'}`} />
+              <Icon className={`w-7 h-7 ${isSelected ? 'text-purple-400' : crm.id === 'demo' ? 'text-amber-400' : 'text-gray-500'}`} />
               <span className={`text-sm font-medium ${isSelected ? 'text-white' : 'text-gray-400'}`}>{crm.name}</span>
               {crm.id === 'demo' && <span className="text-xs text-gray-500">Try PONS with sample data</span>}
             </button>
@@ -156,7 +168,7 @@ export default function ConnectPage() {
                 Load sample CRM data to explore PONS features. Includes realistic opportunities, leads, and activities.
               </p>
               <button onClick={handleConnect} disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-amber-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-amber-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2">
                 {loading ? (
                   <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Loading Demo...</>
                 ) : (
@@ -167,23 +179,32 @@ export default function ConnectPage() {
           ) : (
             <>
               <label className="block text-gray-400 text-sm mb-2">{selectedCRMData?.name} API Key</label>
-              <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="ghl_..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 mb-4 focus:outline-none focus:border-blue-500" />
+              <input 
+                type="password" 
+                value={apiKey} 
+                onChange={(e) => setApiKey(e.target.value)} 
+                placeholder={selectedCRMData?.placeholder || 'Enter API key...'}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 mb-4 focus:outline-none focus:border-purple-500" 
+              />
               <button onClick={handleConnect} disabled={loading || !apiKey}
-                className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                className="w-full py-4 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 {loading ? (
-                  <><div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" /> Connecting...</>
+                  <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Connecting...</>
                 ) : (
-                  <>Authenticate & Sync <span>→</span></>
+                  <>Connect & Analyze <span>→</span></>
                 )}
               </button>
             </>
           )}
 
           {error && <p className="text-red-500 text-sm mt-4 text-center">{error}</p>}
-          <p className="text-gray-500 text-xs text-center mt-4">By connecting, you agree to PONS processing your data in memory. No data is stored persistently.</p>
+          <p className="text-gray-500 text-xs text-center mt-4">
+            By connecting, you agree to PONS processing your data in memory. No data is stored.
+          </p>
         </div>
       )}
+
+      <p className="text-gray-600 text-xs mt-8">Revenue Intelligence Platform</p>
     </div>
   );
 }
