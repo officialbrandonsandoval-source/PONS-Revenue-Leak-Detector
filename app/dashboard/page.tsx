@@ -21,21 +21,11 @@ const typeIcons: Record<string, typeof AlertTriangle> = {
   UNTOUCHED_LEAD: Clock,
   SLOW_RESPONSE: Clock,
   DEAD_PIPELINE: TrendingDown,
-  MISSING_FOLLOW_UP: Clock,
-  UNASSIGNED_LEAD: Users,
 };
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { 
-    isConnected, 
-    crmType, 
-    leaks, 
-    disconnect, 
-    refreshLeaks,
-    isLoading,
-    lastRefresh 
-  } = useApp();
+  const { isConnected, crmType, leaks, disconnect, refreshLeaks, isLoading } = useApp();
 
   useEffect(() => {
     if (!isConnected) {
@@ -44,11 +34,7 @@ export default function DashboardPage() {
   }, [isConnected, router]);
 
   const handleRefresh = async () => {
-    try {
-      await refreshLeaks();
-    } catch (error) {
-      console.error('Refresh failed:', error);
-    }
+    await refreshLeaks();
   };
 
   const handleDisconnect = () => {
@@ -68,31 +54,16 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-purple-500">PONS</h1>
-            <p className="text-xs text-gray-500">
-              {crmType?.toUpperCase()} {crmType === 'demo' && '(Demo)'}
-            </p>
+            <p className="text-xs text-gray-500">Connected: {crmType?.toUpperCase()}</p>
           </div>
           <div className="flex items-center gap-2">
-            {lastRefresh && (
-              <span className="text-xs text-gray-600 hidden sm:block">
-                {new Date(lastRefresh).toLocaleTimeString()}
-              </span>
-            )}
-            <button 
-              onClick={handleRefresh} 
-              disabled={isLoading}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
-              ) : (
-                <RefreshCw className="w-5 h-5 text-gray-400" />
-              )}
+            <button onClick={handleRefresh} disabled={isLoading}
+              className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors disabled:opacity-50">
+              {isLoading ? <Loader2 className="w-5 h-5 text-gray-400 animate-spin" /> 
+                : <RefreshCw className="w-5 h-5 text-gray-400" />}
             </button>
-            <button 
-              onClick={handleDisconnect}
-              className="p-2 rounded-lg bg-gray-800 hover:bg-red-900/50 transition-colors"
-            >
+            <button onClick={handleDisconnect}
+              className="p-2 rounded-lg bg-gray-800 hover:bg-red-900/50 transition-colors">
               <LogOut className="w-5 h-5 text-gray-400" />
             </button>
           </div>
@@ -102,29 +73,14 @@ export default function DashboardPage() {
       <div className="p-4 grid grid-cols-2 gap-3">
         <div className="bg-gradient-to-br from-red-900/30 to-red-900/10 rounded-xl p-4 border border-red-500/20">
           <p className="text-red-400 text-xs font-medium mb-1">REVENUE AT RISK</p>
-          <p className="text-2xl font-bold text-white">
-            ${totalRevenue >= 1000000 
-              ? `${(totalRevenue / 1000000).toFixed(1)}M` 
-              : `${(totalRevenue / 1000).toFixed(0)}k`}
-          </p>
+          <p className="text-2xl font-bold text-white">${(totalRevenue / 1000).toFixed(0)}k</p>
         </div>
         <div className="bg-gradient-to-br from-orange-900/30 to-orange-900/10 rounded-xl p-4 border border-orange-500/20">
           <p className="text-orange-400 text-xs font-medium mb-1">ACTIVE LEAKS</p>
           <p className="text-2xl font-bold text-white">{leaks.length}</p>
-          <p className="text-xs text-gray-500">
-            {criticalCount > 0 && <span className="text-red-400">{criticalCount} critical</span>}
-            {criticalCount > 0 && highCount > 0 && ', '}
-            {highCount > 0 && <span className="text-orange-400">{highCount} high</span>}
-          </p>
+          <p className="text-xs text-gray-500">{criticalCount} critical, {highCount} high</p>
         </div>
       </div>
-
-      {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-          <span className="ml-3 text-gray-400">Analyzing pipeline...</span>
-        </div>
-      )}
 
       <div className="px-4 pb-24">
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -132,15 +88,15 @@ export default function DashboardPage() {
           Revenue Leaks Detected
         </h2>
 
-        {!isLoading && leaks.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-2" />
+            <p className="text-gray-500">Analyzing pipeline...</p>
+          </div>
+        ) : leaks.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/10 flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <p className="font-medium text-white">Pipeline Healthy</p>
-            <p className="text-sm mt-1">No revenue leaks detected</p>
+            <p>No leaks detected</p>
+            <p className="text-sm mt-1">Your pipeline looks healthy!</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -178,19 +134,15 @@ export default function DashboardPage() {
 
       <nav className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-t border-gray-800 px-6 py-4">
         <div className="flex justify-center gap-6">
-          <button 
-            onClick={() => router.push('/dashboard/chat')}
-            className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={() => router.push('/dashboard/chat')}
+            className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             <span className="text-xs">Chat</span>
           </button>
-          <button 
-            onClick={() => router.push('/dashboard/voice')}
-            className="flex flex-col items-center gap-1 px-8 py-3 bg-purple-600 rounded-full text-white hover:bg-purple-500 transition-colors"
-          >
+          <button onClick={() => router.push('/dashboard/voice')}
+            className="flex flex-col items-center gap-1 px-8 py-3 bg-purple-600 rounded-full text-white hover:bg-purple-500 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
             </svg>
